@@ -106,13 +106,34 @@ async function copyRow(d) {
   await navigator.clipboard.writeText(tsv);
 }
 
+// En-têtes = noms EXACTS des propriétés Notion (import mappe par nom).
+const CSV_HEADERS = ["Fait", "Angle", "Chapitre", "Profil", "Chiffres", "Source"];
+function csvField(v) {
+  const s = String(v ?? "");
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+// Télécharge toutes les fiches en CSV (pour "Merge with CSV" côté Notion).
+function exportCsv(drafts) {
+  const lines = [CSV_HEADERS.join(",")];
+  for (const d of drafts) lines.push(copyCells(d).map(csvField).join(","));
+  const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "veille-deuwi.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 async function renderDrafts() {
   const drafts = await api(`/api/drafts?statut=propose`);
   if (!drafts.length) {
     view.innerHTML = `<div class="empty">Aucune proposition. La passe quotidienne (cron) alimente les fiches et exclut celles déjà sur Notion.</div>`;
     return;
   }
-  view.innerHTML = `<p class="hint">${drafts.length} proposition${drafts.length > 1 ? "s" : ""} — copie et colle dans Notion. Ce qui est déjà sur Notion est exclu automatiquement.</p>` +
+  view.innerHTML = `<div class="deuwi-head">
+      <p class="hint">${drafts.length} proposition${drafts.length > 1 ? "s" : ""} — 📋 copie une ligne (colle dans une cellule Notion), ou ⬇ exporte tout en CSV (Notion : ⋯ → Merge with CSV). Déjà sur Notion = exclu.</p>
+      <button id="export-csv" class="csv">⬇ Exporter CSV</button>
+    </div>` +
     drafts.map(d => `
     <div class="card draft" data-id="${d.item_id}">
       <div class="meta">
@@ -131,6 +152,7 @@ async function renderDrafts() {
         <button class="copy">📋 Copier</button>
       </div>
     </div>`).join("");
+  view.querySelector("#export-csv").onclick = () => { exportCsv(drafts); setStatus(`CSV exporté (${drafts.length} fiches)`); };
   view.querySelectorAll(".card.draft").forEach((card, i) => {
     card.querySelector(".copy").onclick = async () => {
       try {

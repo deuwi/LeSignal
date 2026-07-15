@@ -65,6 +65,9 @@ th { color: var(--muted); font-weight: 600; }
 .card.draft.copied { opacity: .55; }
 .card.draft.copied .copy { color: var(--ok); border-color: var(--ok); }
 .hint { color: var(--muted); font-size: .85rem; margin: 0 0 1rem; }
+.deuwi-head { display: flex; align-items: flex-start; gap: 1rem; }
+.deuwi-head .hint { flex: 1; }
+.csv { background: var(--panel); border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; padding: .4rem .8rem; cursor: pointer; white-space: nowrap; }
 
 /* catégories (chips) */
 .chips { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .6rem; }
