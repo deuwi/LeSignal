@@ -3,6 +3,7 @@ const statusEl = document.getElementById("status");
 let tab = "dev";
 let cfg = null; // config cache (catégories, etc.)
 let lang = localStorage.getItem("signal_lang") || "fr";
+let theme = localStorage.getItem("signal_theme") || ((window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light");
 
 // filtres onglet Dev
 const dev = { statut: "retenu", categorie: null, favori: false };
@@ -20,6 +21,7 @@ const I18N = {
     nav_dev: "La sélection", nav_deuwi: "Atelier Deuwi", nav_sources: "Sources", nav_reglages: "Réglages",
     method: "Une passe quotidienne, dédoublonnée, sans chiffre non sourcé.",
     about: "À propos",
+    theme_dark: "Sombre", theme_light: "Clair",
     status_auto: "Mise à jour automatique quotidienne",
     standfirst: "L'IA ne prendra pas ton job — quelqu'un qui la dirige mieux que toi, peut-être. Sans hype, sans peur, sans promesse chiffrée.",
     aside_label: "Le bruit qu'on a coupé",
@@ -47,6 +49,7 @@ const I18N = {
     nav_dev: "The selection", nav_deuwi: "Deuwi Workshop", nav_sources: "Sources", nav_reglages: "Settings",
     method: "One daily pass, de-duplicated, no unsourced figure.",
     about: "About",
+    theme_dark: "Dark", theme_light: "Light",
     status_auto: "Automatic daily update",
     standfirst: "AI won't take your job — someone who directs it better than you might. No hype, no fear, no headline numbers.",
     aside_label: "The noise we cut",
@@ -328,6 +331,12 @@ async function render() {
   } catch (e) { view.innerHTML = `<div class="empty">Erreur: ${esc(e.message)}</div>`; }
 }
 
+function applyTheme() {
+  document.documentElement.dataset.theme = theme;
+  const btn = document.getElementById("theme-btn");
+  if (btn) btn.textContent = theme === "light" ? t("theme_dark") : t("theme_light");
+}
+
 function applyLang() {
   document.documentElement.lang = lang;
   document.getElementById("t-kicker").textContent = t("kicker");
@@ -338,6 +347,7 @@ function applyLang() {
   document.getElementById("t-method").textContent = t("method");
   document.querySelectorAll("[data-i18n]").forEach(b => b.textContent = t(b.dataset.i18n));
   document.querySelectorAll("#lang [data-lang]").forEach(b => b.classList.toggle("active", b.dataset.lang === lang));
+  applyTheme(); // rafraîchit le libellé du bouton thème dans la langue
   setStatus(t("status_auto"));
 }
 
@@ -350,6 +360,12 @@ document.querySelectorAll("#lang [data-lang]").forEach(b => b.onclick = () => {
   lang = b.dataset.lang; localStorage.setItem("signal_lang", lang);
   applyLang(); render();
 });
+document.getElementById("theme-btn").onclick = () => {
+  theme = theme === "light" ? "dark" : "light";
+  localStorage.setItem("signal_theme", theme);
+  applyTheme();
+};
 
+applyTheme();
 applyLang();
 render();
