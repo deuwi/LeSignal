@@ -9,6 +9,10 @@
     "directory": "./public",
     "binding": "ASSETS"
   },
+  // Domaine perso (deuwi.xyz déjà sur Cloudflare) — DNS + certif auto au deploy
+  "routes": [
+    { "pattern": "veille.deuwi.xyz", "custom_domain": true }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
