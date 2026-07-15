@@ -3,6 +3,8 @@ import type { Env } from "./types";
 import { runDaily } from "./daily";
 import { ranWithin } from "./state";
 import { loadConfig, saveConfig, type Config } from "./config";
+import { requireAdmin } from "./auth";
+import { createNotionPage } from "./notion/write";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -116,6 +118,38 @@ app.post("/api/daily", async (c) => {
       .catch((e) => console.error("daily error:", e))
   );
   return c.json({ started: true });
+});
+
+// Créer une fiche dans Notion — action d'ÉCRITURE, protégée par ADMIN_TOKEN.
+app.post("/api/drafts/:id/notion", async (c) => {
+  const unauth = requireAdmin(c);
+  if (unauth) return unauth;
+
+  const id = Number(c.req.param("id"));
+  const row = await c.env.DB.prepare(
+    `SELECT d.fait, d.angle, d.notion_id, i.url,
+            v.chapitre, v.profil, v.chiffres_flag
+     FROM drafts d JOIN items i ON i.id=d.item_id
+     LEFT JOIN verdicts v ON v.item_id=d.item_id
+     WHERE d.item_id=?`
+  ).bind(id).first<{
+    fait: string; angle: string; notion_id: string | null; url: string;
+    chapitre: number | null; profil: string | null; chiffres_flag: string | null;
+  }>();
+  if (!row) return c.json({ error: "fiche introuvable" }, 404);
+  if (row.notion_id) return c.json({ ok: true, notion_id: row.notion_id, already: true });
+
+  try {
+    const pageId = await createNotionPage(c.env, {
+      fait: row.fait, angle: row.angle, chapitre: row.chapitre,
+      profil: row.profil, chiffres_flag: row.chiffres_flag, url: row.url,
+    });
+    await c.env.DB.prepare("UPDATE drafts SET notion_id=?, statut='dans_notion' WHERE item_id=?")
+      .bind(pageId, id).run();
+    return c.json({ ok: true, notion_id: pageId });
+  } catch (e) {
+    return c.json({ error: String(e) }, 502);
+  }
 });
 
 // Static assets (dashboard) en fallback

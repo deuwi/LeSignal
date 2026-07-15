@@ -4,9 +4,13 @@
 # Phase 2 — LLM curation (Anthropic Haiku)
 ANTHROPIC_API_KEY=
 
-# Phase 3 — Notion sync (token d'intégration interne Notion)
+# Phase 3 — Notion (token d'intégration interne Notion)
 NOTION_TOKEN=
 NOTION_DB_ID=
+
+# Protège les actions d'écriture (créer dans Notion) sur l'app publique.
+# Mets une longue chaîne aléatoire. Saisie 1× dans le dashboard (localStorage).
+ADMIN_TOKEN=
 
 # Optionnel — France Travail (source chiffres marché FR)
 FT_CLIENT_ID=

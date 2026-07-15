@@ -17,6 +17,13 @@ async function api(path, opts) {
 function setStatus(msg) { statusEl.textContent = msg; }
 function esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 
+// Clé admin (protège l'écriture Notion). Saisie 1×, gardée en localStorage.
+function adminToken() {
+  let t = localStorage.getItem("veille_admin");
+  if (!t) { t = prompt("Clé admin (pour écrire dans Notion) :"); if (t) localStorage.setItem("veille_admin", t.trim()); }
+  return t;
+}
+
 async function ensureConfig() { if (!cfg) cfg = await api("/api/config"); return cfg; }
 
 function parseJson(s, fallback) { try { return s ? JSON.parse(s) : fallback; } catch { return fallback; } }
@@ -96,32 +103,14 @@ function copyCells(d) {
   ];
 }
 
-// Copie au format TABULAIRE (TSV): 1 ligne, valeurs séparées par des tabulations.
-// C'est ce que Notion découpe en colonnes au collage (le HTML <table> ferait un
-// bloc imbriqué au lieu de remplir les colonnes). Ordre = colonnes Notion.
-async function copyRow(d) {
-  const tsv = copyCells(d)
-    .map(c => String(c).replace(/[\t\r\n]+/g, " ").trim())
-    .join("\t");
-  await navigator.clipboard.writeText(tsv);
-}
-
-// En-têtes = noms EXACTS des propriétés Notion (import mappe par nom).
-const CSV_HEADERS = ["Fait", "Angle", "Chapitre", "Profil", "Chiffres", "Source"];
+// Champ CSV: guillemets si virgule/guillemet/retour-ligne (RFC 4180).
 function csvField(v) {
   const s = String(v ?? "");
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
-// Télécharge toutes les fiches en CSV (pour "Merge with CSV" côté Notion).
-function exportCsv(drafts) {
-  const lines = [CSV_HEADERS.join(",")];
-  for (const d of drafts) lines.push(copyCells(d).map(csvField).join(","));
-  const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "veille-deuwi.csv";
-  a.click();
-  URL.revokeObjectURL(a.href);
+// Copie une ligne CSV (valeurs séparées par des virgules). Ordre = colonnes Notion.
+async function copyRow(d) {
+  await navigator.clipboard.writeText(copyCells(d).map(csvField).join(","));
 }
 
 async function renderDrafts() {
@@ -130,10 +119,7 @@ async function renderDrafts() {
     view.innerHTML = `<div class="empty">Aucune proposition. La passe quotidienne (cron) alimente les fiches et exclut celles déjà sur Notion.</div>`;
     return;
   }
-  view.innerHTML = `<div class="deuwi-head">
-      <p class="hint">${drafts.length} proposition${drafts.length > 1 ? "s" : ""} — 📋 copie une ligne (colle dans une cellule Notion), ou ⬇ exporte tout en CSV (Notion : ⋯ → Merge with CSV). Déjà sur Notion = exclu.</p>
-      <button id="export-csv" class="csv">⬇ Exporter CSV</button>
-    </div>` +
+  view.innerHTML = `<p class="hint">${drafts.length} proposition${drafts.length > 1 ? "s" : ""} — 📋 copie la ligne CSV, colle dans Notion. Déjà sur Notion = exclu automatiquement.</p>` +
     drafts.map(d => `
     <div class="card draft" data-id="${d.item_id}">
       <div class="meta">
@@ -150,17 +136,29 @@ async function renderDrafts() {
       ${refLinks(d.links)}
       <div class="draft-actions">
         <button class="copy">📋 Copier</button>
+        <button class="notion">⇪ Créer dans Notion</button>
       </div>
     </div>`).join("");
-  view.querySelector("#export-csv").onclick = () => { exportCsv(drafts); setStatus(`CSV exporté (${drafts.length} fiches)`); };
   view.querySelectorAll(".card.draft").forEach((card, i) => {
     card.querySelector(".copy").onclick = async () => {
       try {
         await copyRow(drafts[i]);
         card.classList.add("copied");
         card.querySelector(".copy").textContent = "✓ Copié";
-        setStatus("ligne copiée — colle dans la vue Table Notion");
+        setStatus("ligne CSV copiée");
       } catch (e) { setStatus("copie impossible: " + e.message); }
+    };
+    card.querySelector(".notion").onclick = async () => {
+      const t = adminToken();
+      if (!t) return;
+      const btn = card.querySelector(".notion");
+      btn.disabled = true; setStatus("création dans Notion…");
+      try {
+        const res = await fetch(`/api/drafts/${drafts[i].item_id}/notion`, { method: "POST", headers: { "x-admin-token": t } });
+        if (res.status === 401) { localStorage.removeItem("veille_admin"); setStatus("clé refusée"); alert("Clé admin refusée. Réessaie."); btn.disabled = false; return; }
+        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || res.status); }
+        setStatus("créé dans Notion ✓"); renderDrafts();
+      } catch (e) { setStatus("Notion: " + e.message); alert("Notion: " + e.message); btn.disabled = false; }
     };
   });
 }

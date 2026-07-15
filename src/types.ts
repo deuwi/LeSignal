@@ -6,6 +6,7 @@ export interface Env {
   ANTHROPIC_API_KEY?: string;
   NOTION_TOKEN?: string;
   NOTION_DB_ID?: string;
+  ADMIN_TOKEN?: string;   // protège les actions d'écriture (app publique)
   FT_CLIENT_ID?: string;
   FT_CLIENT_SECRET?: string;
 }
