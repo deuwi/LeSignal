@@ -74,6 +74,35 @@ Cron hebdo (lundi 07:00 UTC) configuré dans [wrangler.jsonc](wrangler.jsonc).
 Repo public. **Aucun secret dans le dépôt.** `.dev.vars` est gitignoré ;
 voir [.dev.vars.example](.dev.vars.example). Secrets de prod via `wrangler secret put`.
 
+### Modèle d'authentification
+
+L'app est déployée **publiquement**. La séparation est simple :
+
+- **Lecture = publique** (aucune auth) : `GET /api/items`, `/api/stats`, `/api/sources`, `/api/drafts`, `/api/config`, et le dashboard.
+- **Écriture = protégée** par un secret partagé `ADMIN_TOKEN` : toute route qui modifie l'état ou dépense des ressources.
+
+| Route | Méthode | Auth | Effet protégé |
+|---|---|---|---|
+| `/api/drafts/:id/notion` | POST | ✅ | crée une page Notion |
+| `/api/config` | PUT / DELETE | ✅ | modifie/réinitialise les filtres (regex → ReDoS possible) |
+| `/api/daily` | POST | ✅ | déclenche ingestion + curation Haiku (coût $) |
+| `/api/items/:id/flag` | POST | ✅ | écrit en base (lu/favori) |
+| lectures + dashboard | GET | ❌ | — |
+
+**Comment ça marche** ([src/auth.ts](src/auth.ts)) :
+
+1. Le client envoie l'en-tête `X-Admin-Token: <valeur>` sur chaque écriture.
+2. Le serveur compare à `ADMIN_TOKEN` (secret Worker) en **temps constant** (empreintes SHA-256, pas de fuite de longueur).
+3. Absent/mauvais → `401`. `ADMIN_TOKEN` non configuré → `503`.
+
+Côté dashboard : la clé est saisie **une fois** (popup), gardée en `localStorage`, renvoyée sur chaque action d'écriture. Un `401` la purge et redemande.
+
+`ADMIN_TOKEN` est une chaîne aléatoire **que tu définis** (ex. `openssl rand -hex 24`) — la même valeur va dans le secret Worker et dans le dashboard ; ce n'est pas un token fourni par un service. `NOTION_TOKEN` (intégration Notion, pour écrire les pages) et `ADMIN_TOKEN` (ta clé d'accès aux écritures) sont **distincts**.
+
+**Défenses complémentaires** : requêtes SQL paramétrées ; `processEntities:false` sur le parseur XML (pas de XXE) ; bornes sur la config (longueur des motifs, nb de règles, fraîcheur 1-365) contre le ReDoS ; `safeUrl` côté client bloque les href `javascript:`/`data:` ; erreurs internes loggées serveur, message générique au client.
+
+**Non couvert** (à ajouter si besoin) : rate-limiting (règle Cloudflare recommandée vu l'exposition publique).
+
 ## Roadmap
 
 1. ✅ Socle ingest + dédup + filtre + dashboard lecture
