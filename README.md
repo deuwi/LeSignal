@@ -1,8 +1,8 @@
 # Le Signal
 
-Le signal, pas le bruit. Une app de veille qui agrège et filtre l'actu tech en
-continu, pré-triée par heuristique avant tout appel LLM, pour ne garder que ce
-qui compte.
+Le signal, pas le bruit. Une app de veille qui agrège et filtre l'actu tech
+chaque jour, pré-triée par heuristique avant tout appel LLM, pour ne garder que
+ce qui compte.
 
 **En ligne : [signal.deuwi.xyz](https://signal.deuwi.xyz)** · Conception :
 [SPEC.md](SPEC.md) · Sources : [SOURCES.md](SOURCES.md)
@@ -36,7 +36,7 @@ La config du pré-filtre (fraîcheur, exclusions, mots-clés, catégories) est
 Un second flux (`deuwi`) sert à ma propre production de contenu : curation
 plus sélective, chaque **fiche** associant fait sourcé, angle de post,
 chapitre de référence et profil ciblé, en FR et EN. Il alimente directement
-mon écriture LinkedIn/TikTok et s'exporte en CSV ou vers Notion. Pas conçu
+mon écriture LinkedIn et s'exporte en CSV ou vers Notion. Pas conçu
 pour un usage tiers, mais rien n'est caché : le code et la logique sont dans
 ce même repo.
 
