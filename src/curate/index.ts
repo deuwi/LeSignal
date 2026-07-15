@@ -4,6 +4,7 @@ import type { Env } from "../types";
 import { askJson } from "../llm/anthropic";
 import { fetchSourceText } from "./fetch-source";
 import { SCORE_SYSTEM, scoreUser, DRAFT_SYSTEM, draftUser } from "./prompts";
+import { normalizeUrl } from "../ingest/dedup";
 
 interface ScoreOut {
   pertinent: boolean;
@@ -27,12 +28,14 @@ export interface CurateReport {
   traites: number;
   pertinents: number;
   rejetes: number;
+  exclus_notion: number;
   fetch_echecs: number;
   drafts: number;
   errors: { item: number; error: string }[];
 }
 
-export async function runCurate(env: Env, limit = 15): Promise<CurateReport> {
+// excludeUrls: URLs déjà présentes sur Notion → skip avant scoring (économie tokens).
+export async function runCurate(env: Env, limit = 40, excludeUrls: Set<string> = new Set()): Promise<CurateReport> {
   const { results } = await env.DB.prepare(
     `SELECT i.id, i.url, i.titre, i.resume, i.date_pub
      FROM items i
@@ -44,11 +47,18 @@ export async function runCurate(env: Env, limit = 15): Promise<CurateReport> {
 
   const report: CurateReport = {
     candidats: results.length, traites: 0, pertinents: 0, rejetes: 0,
-    fetch_echecs: 0, drafts: 0, errors: [],
+    exclus_notion: 0, fetch_echecs: 0, drafts: 0, errors: [],
   };
 
   for (const it of results) {
     try {
+      // Déjà sur Notion → exclu avant tout appel LLM (économie tokens)
+      if (excludeUrls.has(normalizeUrl(it.url))) {
+        await env.DB.prepare("UPDATE items SET statut='rejete', raison_rejet='deja-notion' WHERE id=?").bind(it.id).run();
+        report.exclus_notion++;
+        continue;
+      }
+
       // Étage 3 — fetch source complète (obligatoire) + score
       const fetched = await fetchSourceText(it.url);
       const contenu = fetched ?? it.resume ?? it.titre;
@@ -86,7 +96,7 @@ export async function runCurate(env: Env, limit = 15): Promise<CurateReport> {
       );
       await env.DB.prepare(
         `INSERT INTO drafts (item_id, fait, angle, sources_line, statut, edite_le)
-         VALUES (?, ?, ?, ?, 'brouillon', datetime('now'))
+         VALUES (?, ?, ?, ?, 'propose', datetime('now'))
          ON CONFLICT(item_id) DO UPDATE SET
            fait=excluded.fait, angle=excluded.angle, sources_line=excluded.sources_line`
       ).bind(it.id, draft.fait, draft.angle, draft.sources_line).run();

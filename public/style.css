@@ -61,6 +61,7 @@ th { color: var(--muted); font-weight: 600; }
 .card.draft .src a { color: var(--muted); }
 .draft-actions { display: flex; gap: .4rem; margin-top: .6rem; }
 .draft-actions button { padding: .3rem .7rem; }
-.draft-actions .ok { color: var(--ok); border-color: var(--ok); }
-.draft-actions .no { color: var(--bad); border-color: var(--bad); }
-#curate { border-color: var(--accent); color: var(--accent); }
+.draft-actions .copy { color: var(--accent); border-color: var(--accent); }
+.card.draft.copied { opacity: .55; }
+.card.draft.copied .copy { color: var(--ok); border-color: var(--ok); }
+.hint { color: var(--muted); font-size: .85rem; margin: 0 0 1rem; }

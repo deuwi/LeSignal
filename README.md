@@ -8,32 +8,32 @@ Cloudflare Workers + Hono + D1. Budget mini, semi-assisté.
 
 Conception : [SPEC.md](SPEC.md) · Sources : [SOURCES.md](SOURCES.md).
 
-## État — Phases 1-3
+## Fonctionnement
 
-- **Phase 1** — ingestion (RSS/Atom + Hacker News), dédup, pré-filtre heuristique (0 token), dashboard lecture.
-- **Phase 2** — pipeline Deuwi : fetch source complète + Haiku (score, chapitre, profil, vérif chiffres) + draft angle, kanban de validation (brouillon/validé/jeté), édition inline.
-- **Phase 3** — sync Notion : push des fiches validées vers ta base, upsert anti-doublon (`notion_id`).
+**Une passe quotidienne automatique** (cron) fait tout : ingestion → lecture Notion → curation Haiku → exclusion de ce qui est déjà sur Notion. Aucun bouton d'exécution (anti-spam). L'app est une **source de propositions** ; tu copies-colles toi-même dans Notion.
 
-Secrets requis (`.dev.vars` local / `wrangler secret put` prod) :
-`ANTHROPIC_API_KEY` (Phase 2), `NOTION_TOKEN` + `NOTION_DB_ID` (Phase 3).
+- **Flux `dev`** — liste de lecture (favoris ★).
+- **Flux `deuwi`** — fiches proposées (fait + angle + chapitre + profil + flag chiffres). Bouton **📋 Copier pour Notion** par fiche. Ce qui est déjà dans ta base Notion est exclu automatiquement (dédup par URL).
 
-### Base Notion — propriétés attendues (noms EXACTS)
+### Étapes
 
-Le sync mappe sur ces propriétés ; les noms doivent correspondre sinon l'API renvoie 400 :
+- **Phase 1** — ingestion (RSS/Atom + Hacker News), dédup, pré-filtre heuristique (0 token).
+- **Phase 2** — curation Deuwi : fetch source complète + Haiku (score, chapitre, profil, vérif chiffres) + draft angle.
+- **Phase 3** — Notion en **lecture seule** : exclusion des sujets déjà présents. L'app n'écrit pas dans Notion.
 
-| Propriété | Type Notion |
-|---|---|
-| `Fait` | Title |
-| `Angle` | Text |
-| `Statut` | Select |
-| `Chapitre` | Select |
-| `Profil` | Select |
-| `Chiffres` | Select |
-| `Source` | URL |
-| `Date fait` | Date |
+Secrets (`.dev.vars` local / `wrangler secret put` prod) :
+`ANTHROPIC_API_KEY` (curation), `NOTION_TOKEN` + `NOTION_DB_ID` (exclusion — optionnel).
 
-Les valeurs de Select absentes sont créées automatiquement par Notion.
-Pense à **partager la base avec l'intégration** (⋯ → Connections), sinon 404.
+### Base Notion — exclusion
+
+Pour que la dédup fonctionne, ta base doit avoir une propriété **`Source`** de type **URL** (l'app y lit les URLs déjà traitées). Partage la base avec l'intégration (⋯ → Connections) sinon l'API renvoie 404. Sans token Notion, l'app tourne quand même (aucune exclusion).
+
+### Déclencher la passe manuellement (dev)
+
+```bash
+curl -X POST "http://localhost:8787/api/daily?force=1"   # répond {started:true}, tourne en fond
+```
+En prod c'est le cron quotidien (07:00 UTC) qui s'en charge.
 
 ## Prérequis
 
@@ -76,9 +76,10 @@ voir [.dev.vars.example](.dev.vars.example). Secrets de prod via `wrangler secre
 ## Roadmap
 
 1. ✅ Socle ingest + dédup + filtre + dashboard lecture
-2. ✅ Pipeline `deuwi` : fetch source + Haiku (score, chapitre, vérif chiffres) + draft angle + validation
-3. ✅ Sync Notion (upsert anti-doublon)
-4. Cron polish, sources `search`/`scrape`, France Travail
+2. ✅ Pipeline `deuwi` : fetch source + Haiku (score, chapitre, vérif chiffres) + draft angle
+3. ✅ Notion en lecture (exclusion des sujets déjà traités) + copier-coller manuel
+4. ✅ Passe quotidienne unique (cron) + garde-fou anti-spam
+5. Sources `search`/`scrape` (Cursor/Free-Work/APEC), France Travail, déploiement Cloudflare
 
 ## Licence
 

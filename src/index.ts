@@ -1,12 +1,11 @@
 import { Hono } from "hono";
 import type { Env } from "./types";
-import { runIngest } from "./ingest";
-import { runCurate } from "./curate";
-import { runNotionSync } from "./notion/sync";
+import { runDaily } from "./daily";
+import { ranWithin } from "./state";
 
 const app = new Hono<{ Bindings: Env }>();
 
-// --- API ---
+// --- API (lecture) ---
 
 // Liste items. ?flux=dev|deuwi  ?statut=retenu|rejete|brut  ?limit=
 app.get("/api/items", async (c) => {
@@ -48,7 +47,7 @@ app.get("/api/sources", async (c) => {
   return c.json(results);
 });
 
-// Marquer lu / favori
+// Marquer lu / favori (flux dev, lecture perso)
 app.post("/api/items/:id/flag", async (c) => {
   const id = Number(c.req.param("id"));
   const body = await c.req.json<{ lu?: boolean; favori?: boolean }>();
@@ -61,70 +60,38 @@ app.post("/api/items/:id/flag", async (c) => {
   return c.json({ ok: true });
 });
 
-// Déclenchement manuel de la passe. ?source=<id> pour une seule source.
-app.post("/api/run", async (c) => {
-  const only = c.req.query("source");
-  const report = await runIngest(c.env, only ? Number(only) : undefined);
-  return c.json(report);
-});
-
-// --- Curation Deuwi (Phase 2) ---
-
-// Lance étages 3-4 (Haiku) sur les items retenus non encore curés. ?limit=
-app.post("/api/curate", async (c) => {
-  const limit = Math.min(Number(c.req.query("limit") ?? "15"), 40);
-  const report = await runCurate(c.env, limit);
-  return c.json(report);
-});
-
-// Fiches (drafts) pour le kanban Deuwi. ?statut=brouillon|valide|jete
+// Fiches Deuwi proposées (non encore sur Notion). ?statut=propose (défaut) | dans_notion
 app.get("/api/drafts", async (c) => {
-  const statut = c.req.query("statut");
-  const where = statut ? "WHERE d.statut=?" : "";
-  const binds = statut ? [statut] : [];
+  const statut = c.req.query("statut") ?? "propose";
   const { results } = await c.env.DB.prepare(
-    `SELECT d.item_id, d.fait, d.angle, d.sources_line, d.statut, d.notion_id,
+    `SELECT d.item_id, d.fait, d.angle, d.sources_line, d.statut,
             i.url, i.titre, i.date_pub,
             v.chapitre, v.profil, v.chiffres_flag, v.score, s.nom AS source
      FROM drafts d
      JOIN items i ON i.id=d.item_id
      LEFT JOIN verdicts v ON v.item_id=d.item_id
      JOIN sources s ON s.id=i.source_id
-     ${where}
+     WHERE d.statut=?
      ORDER BY v.score DESC, i.date_pub DESC`
-  ).bind(...binds).all();
+  ).bind(statut).all();
   return c.json(results);
 });
 
-// Éditer une fiche (angle/fait réécrits à la main — semi-assisté)
-app.patch("/api/drafts/:id", async (c) => {
-  const id = Number(c.req.param("id"));
-  const b = await c.req.json<{ fait?: string; angle?: string; sources_line?: string }>();
-  const sets: string[] = [];
-  const binds: unknown[] = [];
-  for (const k of ["fait", "angle", "sources_line"] as const) {
-    if (b[k] !== undefined) { sets.push(`${k}=?`); binds.push(b[k]); }
+// Passe quotidienne — bornée à 1x/20h (anti-spam). ?force=1 pour bypasser en dev.
+// Fire-and-forget: la passe est longue (ingest + Haiku), on répond tout de suite
+// et le travail continue en tâche de fond (waitUntil), ce qui évite les coupures
+// client et garantit le stamp de fin de garde-fou.
+app.post("/api/daily", async (c) => {
+  const force = c.req.query("force") === "1";
+  if (!force && (await ranWithin(c.env, "daily", 20))) {
+    return c.json({ skipped: true, reason: "passe déjà exécutée il y a moins de 20h" });
   }
-  if (!sets.length) return c.json({ ok: false }, 400);
-  sets.push("edite_le=datetime('now')");
-  await c.env.DB.prepare(`UPDATE drafts SET ${sets.join(",")} WHERE item_id=?`).bind(...binds, id).run();
-  return c.json({ ok: true });
-});
-
-// Valider / jeter une fiche
-app.post("/api/drafts/:id/status", async (c) => {
-  const id = Number(c.req.param("id"));
-  const { statut } = await c.req.json<{ statut: "brouillon" | "valide" | "jete" }>();
-  if (!["brouillon", "valide", "jete"].includes(statut)) return c.json({ ok: false }, 400);
-  await c.env.DB.prepare("UPDATE drafts SET statut=?, edite_le=datetime('now') WHERE item_id=?").bind(statut, id).run();
-  return c.json({ ok: true });
-});
-
-// Sync Notion des fiches validées. ?item=<id> pour une seule.
-app.post("/api/notion/sync", async (c) => {
-  const item = c.req.query("item");
-  const report = await runNotionSync(c.env, item ? Number(item) : undefined);
-  return c.json(report);
+  c.executionCtx.waitUntil(
+    runDaily(c.env)
+      .then((r) => console.log("daily (manuel):", JSON.stringify(r)))
+      .catch((e) => console.error("daily error:", e))
+  );
+  return c.json({ started: true });
 });
 
 // Static assets (dashboard) en fallback
@@ -132,8 +99,8 @@ app.get("*", (c) => c.env.ASSETS.fetch(c.req.raw));
 
 export default {
   fetch: app.fetch,
-  // Cron hebdo — voir wrangler.jsonc triggers
+  // Cron quotidien — voir wrangler.jsonc triggers
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(runIngest(env).then((r) => console.log("ingest hebdo:", JSON.stringify(r))));
+    ctx.waitUntil(runDaily(env).then((r) => console.log("daily:", JSON.stringify(r))));
   },
 };

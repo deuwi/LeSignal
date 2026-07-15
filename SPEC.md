@@ -218,47 +218,51 @@ Chapitre rattaché: {chapitre ou "aucun"}. Profil: {profil}.
 CONTENU: {contenu}
 ```
 
-Résultat → `drafts`, `statut=brouillon`. **Jamais publié tel quel** : passe par validation humaine (semi-assisté).
+Résultat → `drafts`, `statut=propose`. **Jamais publié tel quel** : l'humain copie-colle dans Notion après relecture.
+
+> **Révision (pivot)** : le modèle est passé de « semi-assisté avec validation/écriture Notion » à **source de propositions en lecture seule**. Plus de valider/jeter/éditer/push. L'app propose, l'humain copie-colle dans Notion, et Notion sert de référentiel d'exclusion. Voir §8-9.
 
 ---
 
-## 8. Dashboard (React + Vite → Pages)
+## 8. Dashboard (vanilla JS → Workers Assets)
+
+**Aucun bouton d'exécution** (ingestion/curation) : tout passe par la **passe quotidienne (cron)**. Objectif : pas de déclenchement manuel spammable sur un déploiement public.
 
 Onglets :
-- **Deuwi** — kanban `brouillon` / `validé` / `jeté`. Carte = Fait, angle, chapitre-tag, profil-badge, flag chiffres, lien source. Actions : éditer angle, valider, jeter. Validé → bouton « push Notion ».
-- **Dev** — liste chronologique par domaine (langages / IA outillage / web-cloud / archi). Lecture rapide, marquage lu/favori. Pas de curation LLM par défaut.
-- **Sources** — CRUD sources (activer, rank, flux), bouton « run now » global ou par source.
+- **Deuwi** — liste **lecture seule** des fiches `propose` (triées par score). Carte = Fait, angle, chapitre-tag, profil-badge, flag chiffres, lien source, bouton **📋 Copier pour Notion**. Les fiches déjà sur Notion (`statut=dans_notion`) sont masquées.
+- **Dev** — liste par statut (retenu / rejeté / tout). Lecture rapide, favori ★. Pas de curation LLM.
+- **Sources** — table des sources (type, flux, rank, actif, dernière passe). Lecture seule.
 
-Semi-assisté = rien ne part en Notion sans clic humain. L'angle est éditable avant push.
+Format « Copier pour Notion » (presse-papier, texte) :
+```
+Fait : …
+Angle : …
+Chapitre : <n> — <label>
+Profil : …
+Chiffres : OK | À vérifier | Inconnu
+Source : <url>
+```
 
 ---
 
-## 9. Schéma Notion (proposé)
+## 9. Notion — lecture seule (exclusion)
 
-Base « Project Deuwi — Veille ». Propriétés :
+L'app **n'écrit pas** dans Notion. Elle **lit** la base pour exclure les sujets déjà traités (dédup par URL).
 
-| Propriété | Type | Valeurs |
-|---|---|---|
-| Fait | Title | — |
-| Angle | Rich text | — |
-| Chapitre | Select | 1…14, « aucun » |
-| Profil | Select | junior / confirmé / reconverti / freelance |
-| Statut | Select | À écrire / En cours / Publié |
-| Chiffres | Select | OK / À vérifier / Inconnu |
-| Source | URL | — |
-| Date fait | Date | date de l'info |
-| Ajouté le | Created time | auto |
+- Passe quotidienne : `POST /v1/databases/{id}/query` (paginé), extrait la propriété **`Source`** (URL) de chaque page → `Set` d'URLs normalisées.
+- Curation : tout item dont l'URL est dans ce set est **exclu avant scoring** (`items.statut=rejete`, `raison=deja-notion`) → économie de tokens.
+- Fiches existantes désormais sur Notion → `drafts.statut=dans_notion` (masquées de la liste).
 
-Push : `create page` avec ces props + `Statut=À écrire`. `notion_id` stocké dans `drafts` pour éviter les doublons (upsert).
+Seule contrainte côté base Notion : une propriété **`Source`** de type **URL**. Le reste du schéma (Fait, Angle, Chapitre, Profil, Statut, Chiffres, Date) reste à ta main pour le copier-coller, mais n'est pas requis par l'app.
 
-> ⚠️ Connecteur Notion à autoriser (réglages connecteurs claude.ai / `claude mcp`) OU token d'intégration Notion en secret Worker. Non dispo dans cette session non-interactive.
+Auth : token d'intégration interne Notion en secret Worker (`NOTION_TOKEN` + `NOTION_DB_ID`). Base à partager avec l'intégration (⋯ → Connections). Sans token, l'app tourne sans exclusion.
 
 ---
 
 ## 10. Coût & free-tier
 
 - **Ingestion / dedup / filtre** : 0 token, 0 $. Pur code Worker + D1.
-- **Haiku** : seulement sur shortlist post-filtre. Une passe hebdo sur ~20-40 items retenus × (score + draft) ≈ quelques centimes.
+- **Haiku** : seulement sur shortlist post-filtre, hors sujets déjà sur Notion (exclus avant scoring). Une passe quotidienne sur ~20-40 items × (score + draft) ≈ quelques centimes.
 - **D1 / Workers / Queues / Cron / Pages** : free tier Cloudflare largement suffisant à ce volume.
 - Secrets : `ANTHROPIC_API_KEY`, `NOTION_TOKEN` via `wrangler secret put`.
 

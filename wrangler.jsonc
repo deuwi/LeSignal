@@ -18,9 +18,9 @@
       "migrations_dir": "migrations"
     }
   ],
-  // Passe hebdo — lundi 07:00 UTC
+  // Passe quotidienne — 07:00 UTC
   "triggers": {
-    "crons": ["0 7 * * 1"]
+    "crons": ["0 7 * * *"]
   },
   "vars": {
     "FRESHNESS_DAYS": "7"
