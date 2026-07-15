@@ -13,8 +13,7 @@
     {
       "binding": "DB",
       "database_name": "veille",
-      // Remplacer après `wrangler d1 create veille`
-      "database_id": "PLACEHOLDER_DB_ID",
+      "database_id": "dd25729e-6f92-4a87-95be-4b072c2fdc14",
       "migrations_dir": "migrations"
     }
   ],
