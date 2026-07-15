@@ -1,73 +1,94 @@
-# Veille
+# Le Signal
 
-App de veille dev + pipeline de curation « Project Deuwi ». Une app, deux flux.
-Cloudflare Workers + Hono + D1. Budget mini, semi-assisté.
+La veille dev de Deuwi — **le signal, pas le bruit**. Une app de veille qui
+agrège, filtre et met en forme des signaux frais pour développeurs et tech leads,
+et alimente le Project Deuwi (livre + LinkedIn).
 
-- **Flux `dev`** — veille perso large (langages, IA outillage, web/cloud, archi).
-- **Flux `deuwi`** — curation sélective/vérifiée alimentant le Project Deuwi (livre + LinkedIn).
+**En ligne : [signal.deuwi.xyz](https://signal.deuwi.xyz)** · Conception :
+[SPEC.md](SPEC.md) · Sources : [SOURCES.md](SOURCES.md)
 
-Conception : [SPEC.md](SPEC.md) · Sources : [SOURCES.md](SOURCES.md).
+Cloudflare Workers + Hono + D1 + Cron + Assets. Dashboard vanilla JS (zéro build).
+Budget mini (pré-filtre heuristique avant tout appel LLM).
+
+## Deux flux
+
+- **La sélection** (`dev`) — veille perso large, filtrable par **catégories**
+  (langages, IA outillage, web, cloud, backend, sécu, devops, archi) et favoris ★.
+  Résumé dépliable + liens de référence sur chaque entrée.
+- **Atelier Deuwi** (`deuwi`) — curation sélective et vérifiée. Chaque **fiche** =
+  fait sourcé + angle de post + chapitre + profil ciblé + flag chiffres, en
+  **FR et EN**. Copie CSV (colonnes Notion) ou création directe dans Notion.
+
+Interface éditoriale « périodique imprimé », **bilingue FR/EN** et **mode
+clair/sombre** (préférence système par défaut, choix mémorisé).
 
 ## Fonctionnement
 
-**Une passe quotidienne automatique** (cron) fait tout : ingestion → lecture Notion → curation Haiku → exclusion de ce qui est déjà sur Notion. Aucun bouton d'exécution (anti-spam). L'app est une **source de propositions** ; tu copies-colles toi-même dans Notion.
+**Une passe quotidienne automatique** (cron, 07:00 UTC) fait tout, sans bouton
+d'exécution public :
 
-- **Flux `dev`** — liste de lecture filtrable par **catégories** (langages, IA outillage, web, cloud, backend, sécu, devops, archi) + favoris ★. Liens de référence sur chaque carte.
-- **Flux `deuwi`** — fiches proposées (fait + angle + chapitre + profil + flag chiffres + liens de référence). Bouton **📋 Copier** par fiche. Ce qui est déjà dans ta base Notion est exclu automatiquement (dédup par URL).
-- **Réglages** — fraîcheur, mots-clés thèse, exclusions et catégories entièrement éditables (appliqués à la passe suivante).
-
-### Étapes
-
-- **Phase 1** — ingestion (RSS/Atom + Hacker News), dédup, pré-filtre heuristique (0 token).
-- **Phase 2** — curation Deuwi : fetch source complète + Haiku (score, chapitre, profil, vérif chiffres) + draft angle.
-- **Phase 3** — Notion en **lecture seule** : exclusion des sujets déjà présents. L'app n'écrit pas dans Notion.
-
-Secrets (`.dev.vars` local / `wrangler secret put` prod) :
-`ANTHROPIC_API_KEY` (curation), `NOTION_TOKEN` + `NOTION_DB_ID` (exclusion — optionnel).
-
-### Base Notion — exclusion
-
-Pour que la dédup fonctionne, ta base doit avoir une propriété **`Source`** de type **URL** (l'app y lit les URLs déjà traitées). Partage la base avec l'intégration (⋯ → Connections) sinon l'API renvoie 404. Sans token Notion, l'app tourne quand même (aucune exclusion).
-
-### Déclencher la passe manuellement (dev)
-
-```bash
-curl -X POST "http://localhost:8787/api/daily?force=1"   # répond {started:true}, tourne en fond
 ```
-En prod c'est le cron quotidien (07:00 UTC) qui s'en charge.
+ingest (RSS/Atom + Hacker News)
+  → dédup (hash URL normalisée + titre)
+  → pré-filtre heuristique 0 token (fraîcheur · exclusions · pertinence thèse) + catégorisation
+  → lecture Notion : exclut les sujets déjà traités (avant tout appel LLM)
+  → curation Haiku : fetch source complète + score (pertinence, chapitre, profil, vérif chiffres)
+  → draft bilingue FR/EN (fait + angle)
+```
+
+La config du pré-filtre (fraîcheur, exclusions, mots-clés thèse, catégories) est
+**éditable dans l'onglet Réglages** et appliquée à la passe suivante.
+
+## Notion
+
+- **Lecture (exclusion)** — la passe lit la propriété `Source` (URL) de ta base
+  pour ne pas reproposer ce qui y est déjà.
+- **Écriture (à la demande)** — bouton « Créer dans Notion » sur une fiche →
+  crée la page (colonnes Fait / Angle / Chapitre / Profil / Chiffres / Source).
+  Protégé par `ADMIN_TOKEN` (voir Sécurité). La copie CSV reste dispo en repli.
+
+Contrainte base Notion : une propriété **`Source`** de type **URL**. Partage la
+base avec l'intégration (⋯ → Connections) sinon l'API renvoie 404. Sans token
+Notion, l'app tourne sans exclusion ni écriture.
 
 ## Prérequis
 
 - Node 20+
-- Compte Cloudflare + `wrangler` (login via `npx wrangler login`)
+- Compte Cloudflare + `wrangler` (`npx wrangler login`)
 
 ## Setup local
 
 ```bash
 npm install
-
-# créer la base D1 puis coller l'id retourné dans wrangler.jsonc (database_id)
-npx wrangler d1 create veille
-
-# schéma + seed sources
-npm run db:migrate:local
-npm run db:seed:local
-
-# lancer
-npm run dev
+npx wrangler d1 create veille          # colle le database_id dans wrangler.jsonc
+npm run db:migrate:local               # schéma + seed sources
+npm run dev                            # http://localhost:8787
 ```
 
-Dashboard sur `http://localhost:8787`. Bouton **↻ Run** = passe d'ingestion manuelle.
+Secrets locaux dans `.dev.vars` (gitignoré, voir [.dev.vars.example](.dev.vars.example)) :
+`ANTHROPIC_API_KEY` (curation), `NOTION_TOKEN` + `NOTION_DB_ID` (Notion),
+`ADMIN_TOKEN` (protège les écritures).
+
+Déclencher une passe en dev (l'endpoint est protégé — en-tête `X-Admin-Token`) :
+
+```bash
+curl -X POST "http://localhost:8787/api/daily?force=1" -H "x-admin-token: <ADMIN_TOKEN>"
+# → {started:true}, tourne en tâche de fond
+```
 
 ## Déploiement
 
 ```bash
-npm run db:migrate      # migrations sur la base distante
-npm run db:seed
-npm run deploy
+npm run db:migrate                     # migrations sur la base distante
+npm run deploy                         # déploie le Worker + assets
+npx wrangler secret put ANTHROPIC_API_KEY
+npx wrangler secret put NOTION_TOKEN
+npx wrangler secret put NOTION_DB_ID
+npx wrangler secret put ADMIN_TOKEN
 ```
 
-Cron hebdo (lundi 07:00 UTC) configuré dans [wrangler.jsonc](wrangler.jsonc).
+Cron quotidien (07:00 UTC) et custom domain `signal.deuwi.xyz` configurés dans
+[wrangler.jsonc](wrangler.jsonc).
 
 ## Sécurité
 
@@ -103,13 +124,17 @@ Côté dashboard : la clé est saisie **une fois** (popup), gardée en `localSto
 
 **Non couvert** (à ajouter si besoin) : rate-limiting (règle Cloudflare recommandée vu l'exposition publique).
 
-## Roadmap
+## État
 
-1. ✅ Socle ingest + dédup + filtre + dashboard lecture
-2. ✅ Pipeline `deuwi` : fetch source + Haiku (score, chapitre, vérif chiffres) + draft angle
-3. ✅ Notion en lecture (exclusion des sujets déjà traités) + copier-coller manuel
-4. ✅ Passe quotidienne unique (cron) + garde-fou anti-spam
-5. Sources `search`/`scrape` (Cursor/Free-Work/APEC), France Travail, déploiement Cloudflare
+- ✅ Ingestion (RSS/Atom + Hacker News), dédup, pré-filtre heuristique 0 token, catégorisation
+- ✅ Curation Deuwi : fetch source + Haiku (score, chapitre, profil, vérif chiffres) + draft angle
+- ✅ Fiches **bilingues FR/EN** (générées à la curation)
+- ✅ Notion : exclusion (lecture) + création de page (écriture protégée) + copie CSV
+- ✅ Passe quotidienne (cron) + garde-fou 1×/20h
+- ✅ Config éditable (Réglages), liens de référence, résumé dépliable
+- ✅ Interface « Le Signal » (bilingue, mode clair/sombre) déployée sur signal.deuwi.xyz
+- ⬜ Sources `search`/`scrape` (Cursor, Free-Work, APEC), France Travail (chiffres marché FR)
+- ⬜ Rate-limiting, rétro-remplissage EN des fiches antérieures
 
 ## Licence
 
