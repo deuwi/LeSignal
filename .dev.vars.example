@@ -1,0 +1,13 @@
+# Copie vers .dev.vars (gitignoré) et remplis. JAMAIS commité.
+# Phase 1 n'a besoin d'AUCUN secret. Ces clés servent aux phases suivantes.
+
+# Phase 2 — LLM curation (Anthropic Haiku)
+ANTHROPIC_API_KEY=
+
+# Phase 3 — Notion sync (token d'intégration interne Notion)
+NOTION_TOKEN=
+NOTION_DB_ID=
+
+# Optionnel — France Travail (source chiffres marché FR)
+FT_CLIENT_ID=
+FT_CLIENT_SECRET=

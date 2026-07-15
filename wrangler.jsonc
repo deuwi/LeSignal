@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "veille",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "veille",
+      // Remplacer après `wrangler d1 create veille`
+      "database_id": "PLACEHOLDER_DB_ID",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // Passe hebdo — lundi 07:00 UTC
+  "triggers": {
+    "crons": ["0 7 * * 1"]
+  },
+  "vars": {
+    "FRESHNESS_DAYS": "7"
+  }
+}

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Veille</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <h1>Veille</h1>
+    <nav>
+      <button data-tab="dev" class="active">Dev perso</button>
+      <button data-tab="deuwi">Deuwi</button>
+      <button data-tab="sources">Sources</button>
+    </nav>
+    <div class="actions">
+      <span id="status"></span>
+      <button id="run" title="Lancer une passe d'ingestion">↻ Run</button>
+    </div>
+  </header>
+
+  <main id="view"></main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
