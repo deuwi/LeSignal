@@ -6,7 +6,22 @@ const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: "@_",
   trimValues: true,
+  // Désactive l'expansion d'entités du parser (plafond anti-DoS à 1000/doc
+  // dépassé par les gros feeds). On décode les entités courantes nous-mêmes.
+  processEntities: false,
 });
+
+const ENTITIES: Record<string, string> = {
+  "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"',
+  "&apos;": "'", "&#39;": "'", "&nbsp;": " ",
+};
+
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&(?:amp|lt|gt|quot|apos|nbsp|#39);/g, (m) => ENTITIES[m] ?? m)
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)));
+}
 
 const UA = "veille-bot/0.1 (+https://github.com/deuwi/veille)";
 
@@ -18,9 +33,11 @@ function asArray<T>(v: T | T[] | undefined): T[] {
 // Un champ texte peut être string ou { "#text": ... }
 function txt(v: unknown): string {
   if (v == null) return "";
-  if (typeof v === "string") return v;
-  if (typeof v === "object" && "#text" in (v as any)) return String((v as any)["#text"]);
-  return String(v);
+  let s: string;
+  if (typeof v === "string") s = v;
+  else if (typeof v === "object" && "#text" in (v as any)) s = String((v as any)["#text"]);
+  else s = String(v);
+  return decodeEntities(s);
 }
 
 export async function fetchFeed(url: string): Promise<RawItem[]> {

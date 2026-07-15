@@ -133,6 +133,10 @@ document.getElementById("curate").onclick = async () => {
   try {
     const r = await api("/api/curate", { method: "POST" });
     setStatus(`curé ${r.traites}/${r.candidats} · ${r.drafts} fiches · ${r.rejetes} rejetés${r.fetch_echecs ? ` · ${r.fetch_echecs} fetch KO` : ""}${r.errors.length ? ` · ${r.errors.length} erreurs` : ""}`);
+    if (r.errors.length) {
+      console.warn("Curation erreurs:", r.errors);
+      alert("Curation erreurs (extrait):\n\n" + r.errors.slice(0, 3).map(e => `• item ${e.item}: ${e.error}`).join("\n"));
+    }
     if (tab === "deuwi") render();
   } catch (e) { setStatus("erreur curation: " + e.message); }
 };
@@ -142,6 +146,10 @@ document.getElementById("run").onclick = async () => {
   try {
     const r = await api("/api/run", { method: "POST" });
     setStatus(`+${r.inserted} items (${r.retenu} retenus, ${r.rejete} rejetés, ${r.duplicates} doublons)${r.errors.length ? `, ${r.errors.length} erreurs` : ""}`);
+    if (r.errors.length) {
+      console.warn("Sources en erreur:", r.errors);
+      alert("Sources en erreur:\n\n" + r.errors.map(e => `• ${e.source}: ${e.error}`).join("\n"));
+    }
     render();
   } catch (e) { setStatus("erreur: " + e.message); }
 };
