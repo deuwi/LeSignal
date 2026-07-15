@@ -4,7 +4,9 @@ import type { Env, Source, RawItem, Flux } from "../types";
 import { fetchFeed } from "./feeds";
 import { fetchHN } from "./hn";
 import { itemHash } from "./dedup";
-import { filterItem } from "./filter";
+import { filterItem, categorize, compile } from "./filter";
+import { extractLinks, stripTags } from "./links";
+import { loadConfig } from "../config";
 
 export interface RunReport {
   sources: number;
@@ -18,8 +20,7 @@ export interface RunReport {
 
 export async function runIngest(env: Env, onlySourceId?: number): Promise<RunReport> {
   const now = Date.now();
-  const freshnessDays = Number(env.FRESHNESS_DAYS ?? "7");
-  const sinceEpoch = Math.floor((now - freshnessDays * 86_400_000) / 1000);
+  const cfg = compile(await loadConfig(env));
 
   const q = onlySourceId
     ? env.DB.prepare("SELECT * FROM sources WHERE actif=1 AND id=?").bind(onlySourceId)
@@ -45,15 +46,21 @@ export async function runIngest(env: Env, onlySourceId?: number): Promise<RunRep
       try {
         const hash = await itemHash(item.url, item.titre);
         const flux = src.flux as Flux;
-        const verdict = filterItem(item.titre, item.resume, item.date_pub, flux, freshnessDays, now);
+        const rawResume = item.resume ?? "";
+        const verdict = filterItem(item.titre, rawResume, item.date_pub, flux, cfg, now);
+        const cats = categorize(item.titre, rawResume, cfg);
+        const links = extractLinks(rawResume, item.url);
+        const resumeClean = stripTags(rawResume).slice(0, 600) || null;
 
         const res = await env.DB.prepare(
-          `INSERT INTO items (source_id, url, titre, resume, date_pub, hash, flux, statut, raison_rejet)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `INSERT INTO items (source_id, url, titre, resume, date_pub, hash, flux, statut, raison_rejet, categories, links)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(hash) DO NOTHING`
         ).bind(
-          src.id, item.url, item.titre, item.resume ?? null, item.date_pub ?? null,
-          hash, flux, verdict.statut, verdict.raison ?? null
+          src.id, item.url, item.titre, resumeClean, item.date_pub ?? null,
+          hash, flux, verdict.statut, verdict.raison ?? null,
+          cats.length ? JSON.stringify(cats) : null,
+          links.length ? JSON.stringify(links) : null
         ).run();
 
         if (res.meta.changes > 0) {

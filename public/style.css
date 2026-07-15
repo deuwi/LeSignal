@@ -65,3 +65,29 @@ th { color: var(--muted); font-weight: 600; }
 .card.draft.copied { opacity: .55; }
 .card.draft.copied .copy { color: var(--ok); border-color: var(--ok); }
 .hint { color: var(--muted); font-size: .85rem; margin: 0 0 1rem; }
+
+/* catégories (chips) */
+.chips { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .6rem; }
+.chip { background: var(--panel); border: 1px solid var(--border); color: var(--muted); border-radius: 20px; padding: .3rem .8rem; cursor: pointer; font-size: .82rem; }
+.chip.active { color: var(--accent); border-color: var(--accent); }
+.badge.cat { color: var(--accent); border-color: var(--accent); font-size: .72rem; }
+
+/* liens de référence */
+.refs { font-size: .82rem; color: var(--muted); margin: .3rem 0; }
+.refs a { color: var(--accent); text-decoration: none; margin-right: .2rem; }
+.refs a:hover { text-decoration: underline; }
+
+/* Réglages */
+.reglages { max-width: 720px; }
+.reglages label { display: block; margin: 1rem 0 .3rem; font-size: .85rem; color: var(--muted); }
+.reglages input, .reglages textarea { width: 100%; background: var(--panel); border: 1px solid var(--border); color: var(--fg); border-radius: 6px; padding: .5rem; font: inherit; }
+.reglages h3 { margin: 1.4rem 0 .5rem; font-size: 1rem; display: flex; align-items: center; gap: .6rem; }
+.cfg-row { display: flex; gap: .4rem; margin-bottom: .4rem; }
+.cfg-row input { flex: 0 0 30%; }
+.cfg-row input.wide { flex: 1; }
+.cfg-row .del { flex: 0 0 auto; background: none; border: 1px solid var(--border); color: var(--bad); border-radius: 6px; cursor: pointer; padding: 0 .6rem; }
+.add { background: none; border: 1px solid var(--border); color: var(--accent); border-radius: 6px; cursor: pointer; font-size: .78rem; padding: .15rem .5rem; }
+.save-bar { display: flex; align-items: center; gap: .8rem; margin: 1.5rem 0; }
+.save-bar button { background: var(--panel); border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; padding: .5rem 1rem; cursor: pointer; }
+.save-bar .ghost { border-color: var(--border); color: var(--muted); }
+#cfg-status { color: var(--ok); font-size: .85rem; }

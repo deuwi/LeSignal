@@ -61,14 +61,15 @@ export async function runCurate(env: Env, limit = 40, excludeUrls: Set<string> =
 
       // Étage 3 — fetch source complète (obligatoire) + score
       const fetched = await fetchSourceText(it.url);
-      const contenu = fetched ?? it.resume ?? it.titre;
+      const contenu = fetched?.text ?? it.resume ?? it.titre;
       if (!fetched) report.fetch_echecs++;
 
       const score = await askJson<ScoreOut>(env, SCORE_SYSTEM, scoreUser(it.titre, contenu));
 
-      // stocke contenu récupéré + verdict
+      // stocke contenu + liens de référence enrichis
       if (fetched) {
-        await env.DB.prepare("UPDATE items SET contenu=? WHERE id=?").bind(fetched, it.id).run();
+        await env.DB.prepare("UPDATE items SET contenu=?, links=COALESCE(?, links) WHERE id=?")
+          .bind(fetched.text, fetched.links.length ? JSON.stringify(fetched.links) : null, it.id).run();
       }
       await env.DB.prepare(
         `INSERT INTO verdicts (item_id, pertinent, chapitre, profil, chiffres_flag, score, raw_llm)

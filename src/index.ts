@@ -2,33 +2,57 @@ import { Hono } from "hono";
 import type { Env } from "./types";
 import { runDaily } from "./daily";
 import { ranWithin } from "./state";
+import { loadConfig, saveConfig, type Config } from "./config";
 
 const app = new Hono<{ Bindings: Env }>();
 
 // --- API (lecture) ---
 
-// Liste items. ?flux=dev|deuwi  ?statut=retenu|rejete|brut  ?limit=
+// Liste items. ?flux=dev|deuwi  ?statut=retenu|rejete|all  ?categorie=<nom>  ?favori=1  ?limit=
 app.get("/api/items", async (c) => {
   const flux = c.req.query("flux");
   const statut = c.req.query("statut");
+  const categorie = c.req.query("categorie");
+  const favori = c.req.query("favori");
   const limit = Math.min(Number(c.req.query("limit") ?? "100"), 500);
 
   const where: string[] = [];
   const binds: unknown[] = [];
   if (flux === "dev") { where.push("(i.flux='dev' OR i.flux='both')"); }
   else if (flux === "deuwi") { where.push("(i.flux='deuwi' OR i.flux='both')"); }
-  if (statut) { where.push("i.statut=?"); binds.push(statut); }
+  if (statut && statut !== "all") { where.push("i.statut=?"); binds.push(statut); }
+  if (categorie) { where.push("i.categories LIKE ?"); binds.push(`%"${categorie}"%`); }
+  if (favori === "1") { where.push("i.favori=1"); }
   const clause = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
   const { results } = await c.env.DB.prepare(
     `SELECT i.id, i.url, i.titre, i.resume, i.date_pub, i.flux, i.statut, i.raison_rejet,
-            i.lu, i.favori, s.nom AS source, s.rank
+            i.lu, i.favori, i.categories, i.links, s.nom AS source, s.rank
      FROM items i JOIN sources s ON s.id=i.source_id
      ${clause}
      ORDER BY s.rank DESC, i.date_pub DESC
      LIMIT ?`
   ).bind(...binds, limit).all();
   return c.json(results);
+});
+
+// Config éditable (Réglages)
+app.get("/api/config", async (c) => c.json(await loadConfig(c.env)));
+
+app.put("/api/config", async (c) => {
+  const body = await c.req.json<Config>();
+  // validation minimale
+  if (typeof body.freshness_days !== "number" || !Array.isArray(body.exclusions) || !Array.isArray(body.categories)) {
+    return c.json({ ok: false, error: "config invalide" }, 400);
+  }
+  await saveConfig(c.env, body);
+  return c.json({ ok: true });
+});
+
+// Réinitialise: supprime l'override → loadConfig renverra les défauts
+app.delete("/api/config", async (c) => {
+  await c.env.DB.prepare("DELETE FROM app_state WHERE key='config'").run();
+  return c.json({ ok: true });
 });
 
 // Compteurs pour le dashboard
@@ -65,7 +89,7 @@ app.get("/api/drafts", async (c) => {
   const statut = c.req.query("statut") ?? "propose";
   const { results } = await c.env.DB.prepare(
     `SELECT d.item_id, d.fait, d.angle, d.sources_line, d.statut,
-            i.url, i.titre, i.date_pub,
+            i.url, i.titre, i.date_pub, i.links,
             v.chapitre, v.profil, v.chiffres_flag, v.score, s.nom AS source
      FROM drafts d
      JOIN items i ON i.id=d.item_id

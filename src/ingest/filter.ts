@@ -1,25 +1,28 @@
-// Étage 2 — pré-filtre heuristique, 0 token. Voir SPEC.md §5.
+// Étage 2 — pré-filtre heuristique, 0 token. Piloté par la config (SPEC §5).
 import type { Flux } from "../types";
+import type { Config } from "../config";
 
-// Exclusions dures — match = rejet immédiat (BRIQUE).
-const EXCLUSIONS: [RegExp, string][] = [
-  [/\b(apple|iphone|ipad|macos|vision ?pro|ios\b)/i, "apple"],
-  [/\b(formation|devenez|gagnez?\s+\d+\s?k|10\s?000\s?€|freelance à 6 chiffres)/i, "formation-10k"],
-  [/\bl'?ia\s+(va|pourrait)\s+(tuer|remplacer|détruire|anéantir)/i, "peur-artificielle"],
-  [/\b(élections?|gouvernement|ministre|présidentielle|polémique politique)/i, "politique"],
-];
+export interface Compiled {
+  exclusions: { re: RegExp; tag: string }[];
+  these: RegExp | null;
+  categories: { re: RegExp; name: string }[];
+  freshnessDays: number;
+}
 
-// Pertinence thèse (entrée deuwi) — au moins un signal.
-const THESE_KEYWORDS = new RegExp(
-  [
-    "\\b(ia|ai|llm|gpt|claude|copilot|cursor|codex|agent)",
-    "\\b(développeur|developer|dev\\b|ingénieur|engineer|tech lead|programmeur)",
-    "\\b(emploi|embauche|recrutement|licenciement|layoff|hiring|job market|marché du travail)",
-    "\\b(productivité|productivity|compétence|skill|reconversion|junior|senior)",
-    "\\b(automat|code generation|génération de code|pair programming)",
-  ].join("|"),
-  "i"
-);
+// Compile les regex de la config une fois par passe.
+export function compile(cfg: Config): Compiled {
+  const safe = (p: string) => {
+    try { return new RegExp(p, "i"); } catch { return null; }
+  };
+  return {
+    exclusions: cfg.exclusions.map((e) => ({ re: safe(e.pattern), tag: e.tag }))
+      .filter((e): e is { re: RegExp; tag: string } => e.re !== null),
+    these: cfg.these_keywords ? safe(cfg.these_keywords) : null,
+    categories: cfg.categories.map((c) => ({ re: safe(c.keywords), name: c.name }))
+      .filter((c): c is { re: RegExp; name: string } => c.re !== null),
+    freshnessDays: cfg.freshness_days,
+  };
+}
 
 export interface FilterResult {
   statut: "retenu" | "rejete";
@@ -31,7 +34,7 @@ export function filterItem(
   resume: string | undefined,
   datePub: string | undefined,
   flux: Flux,
-  freshnessDays: number,
+  c: Compiled,
   now: number
 ): FilterResult {
   const text = `${titre} ${resume ?? ""}`;
@@ -39,22 +42,26 @@ export function filterItem(
   // 1. Fraîcheur
   if (datePub) {
     const t = Date.parse(datePub);
-    if (!Number.isNaN(t)) {
-      const ageDays = (now - t) / 86_400_000;
-      if (ageDays > freshnessDays) return { statut: "rejete", raison: "hors-fraicheur" };
+    if (!Number.isNaN(t) && (now - t) / 86_400_000 > c.freshnessDays) {
+      return { statut: "rejete", raison: "hors-fraicheur" };
     }
   }
 
   // 2. Exclusions dures
-  for (const [re, tag] of EXCLUSIONS) {
-    if (re.test(text)) return { statut: "rejete", raison: `exclusion:${tag}` };
+  for (const e of c.exclusions) {
+    if (e.re.test(text)) return { statut: "rejete", raison: `exclusion:${e.tag}` };
   }
 
-  // 3. Pertinence thèse — appliquée au flux deuwi uniquement.
-  //    Le flux dev garde tout (curation large côté humain).
-  if (flux === "deuwi" && !THESE_KEYWORDS.test(text)) {
+  // 3. Pertinence thèse — flux deuwi uniquement (le flux dev garde tout)
+  if (flux === "deuwi" && c.these && !c.these.test(text)) {
     return { statut: "rejete", raison: "hors-these" };
   }
 
   return { statut: "retenu" };
+}
+
+// Catégories dev correspondant à l'item (peut être vide).
+export function categorize(titre: string, resume: string | undefined, c: Compiled): string[] {
+  const text = `${titre} ${resume ?? ""}`;
+  return c.categories.filter((cat) => cat.re.test(text)).map((cat) => cat.name);
 }

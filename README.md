@@ -12,8 +12,9 @@ Conception : [SPEC.md](SPEC.md) · Sources : [SOURCES.md](SOURCES.md).
 
 **Une passe quotidienne automatique** (cron) fait tout : ingestion → lecture Notion → curation Haiku → exclusion de ce qui est déjà sur Notion. Aucun bouton d'exécution (anti-spam). L'app est une **source de propositions** ; tu copies-colles toi-même dans Notion.
 
-- **Flux `dev`** — liste de lecture (favoris ★).
-- **Flux `deuwi`** — fiches proposées (fait + angle + chapitre + profil + flag chiffres). Bouton **📋 Copier pour Notion** par fiche. Ce qui est déjà dans ta base Notion est exclu automatiquement (dédup par URL).
+- **Flux `dev`** — liste de lecture filtrable par **catégories** (langages, IA outillage, web, cloud, backend, sécu, devops, archi) + favoris ★. Liens de référence sur chaque carte.
+- **Flux `deuwi`** — fiches proposées (fait + angle + chapitre + profil + flag chiffres + liens de référence). Bouton **📋 Copier** par fiche. Ce qui est déjà dans ta base Notion est exclu automatiquement (dédup par URL).
+- **Réglages** — fraîcheur, mots-clés thèse, exclusions et catégories entièrement éditables (appliqués à la passe suivante).
 
 ### Étapes
 

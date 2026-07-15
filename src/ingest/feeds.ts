@@ -46,12 +46,12 @@ export async function fetchFeed(url: string): Promise<RawItem[]> {
   const xml = await res.text();
   const doc = parser.parse(xml);
 
-  // RSS 2.0
+  // RSS 2.0 — content:encoded (HTML riche) prioritaire sur description pour les liens
   if (doc?.rss?.channel) {
     return asArray(doc.rss.channel.item).map((it: any): RawItem => ({
       url: txt(it.link),
       titre: txt(it.title),
-      resume: txt(it.description),
+      resume: txt(it["content:encoded"]) || txt(it.description),
       date_pub: parseDate(txt(it.pubDate) || txt(it["dc:date"])),
     })).filter((i: RawItem) => i.url && i.titre);
   }

@@ -145,6 +145,8 @@ Dedup : `hash = sha1(normalize(url) + '|' + normalize(titre))`. `normalize` = lo
 
 ## 5. Étage 2 — Pré-filtre heuristique (0 token)
 
+> **Config pilotable** : fraîcheur, exclusions, mots-clés thèse et **catégories dev** sont éditables via l'onglet **Réglages** (stockés en DB `app_state['config']`, défauts dans `src/config.ts`). Plus de regex codées en dur subies : tu as la main. Appliqué à la passe suivante.
+
 Ordre BRIQUE, appliqué en code avant tout LLM :
 
 1. **Fraîcheur** — `date_pub` dans fenêtre. Défaut 7j (cadence hebdo), item hors fenêtre → `rejete:hors-fraicheur` sauf si tag `fond`.
@@ -229,9 +231,12 @@ Résultat → `drafts`, `statut=propose`. **Jamais publié tel quel** : l'humain
 **Aucun bouton d'exécution** (ingestion/curation) : tout passe par la **passe quotidienne (cron)**. Objectif : pas de déclenchement manuel spammable sur un déploiement public.
 
 Onglets :
-- **Deuwi** — liste **lecture seule** des fiches `propose` (triées par score). Carte = Fait, angle, chapitre-tag, profil-badge, flag chiffres, lien source, bouton **📋 Copier pour Notion**. Les fiches déjà sur Notion (`statut=dans_notion`) sont masquées.
-- **Dev** — liste par statut (retenu / rejeté / tout). Lecture rapide, favori ★. Pas de curation LLM.
+- **Deuwi** — liste **lecture seule** des fiches `propose` (triées par score). Carte = Fait, angle, chapitre-tag, profil-badge, flag chiffres, lien source, **liens de référence**, bouton **📋 Copier**. Les fiches déjà sur Notion (`statut=dans_notion`) sont masquées.
+- **Dev** — **chips de catégories** (Langages, IA outillage, Web, Cloud, Backend, Sécurité, DevOps, Archi… + ★ Favoris) en filtre principal, statut (retenu/rejeté/tout) en secondaire. Carte = titre-lien, résumé, **liens de référence**, tags catégories, favori ★.
 - **Sources** — table des sources (type, flux, rank, actif, dernière passe). Lecture seule.
+- **Réglages** — édition de la config (fraîcheur, mots-clés thèse, exclusions, catégories). Enregistrer / Réinitialiser.
+
+**Liens de référence** : chaque item porte `links` (JSON) — URLs extraites du `content:encoded`/`description` du feed (flux dev) et de la page source complète (curation Deuwi). Externes priorisées. Toujours un lien pour creuser.
 
 Format « Copier pour Notion » (presse-papier, texte) :
 ```
