@@ -17,12 +17,25 @@ async function api(path, opts) {
 function setStatus(msg) { statusEl.textContent = msg; }
 function esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 
-// Clé admin (protège l'écriture Notion). Saisie 1×, gardée en localStorage.
+// Clé admin (protège toutes les écritures). Saisie 1×, gardée en localStorage.
 function adminToken() {
   let t = localStorage.getItem("veille_admin");
-  if (!t) { t = prompt("Clé admin (pour écrire dans Notion) :"); if (t) localStorage.setItem("veille_admin", t.trim()); }
+  if (!t) { t = prompt("Clé admin (pour les actions d'écriture) :"); if (t) { t = t.trim(); localStorage.setItem("veille_admin", t); } }
   return t;
 }
+
+// Appel d'ÉCRITURE: injecte la clé admin, gère le 401.
+async function writeApi(path, opts = {}) {
+  const t = adminToken();
+  if (!t) throw new Error("clé admin requise");
+  const res = await fetch(path, { ...opts, headers: { ...(opts.headers || {}), "x-admin-token": t } });
+  if (res.status === 401) { localStorage.removeItem("veille_admin"); throw new Error("clé admin refusée"); }
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || res.status); }
+  return res.json().catch(() => ({}));
+}
+
+// N'autorise que http(s) dans un href (anti javascript:/data:).
+function safeUrl(u) { return /^https?:\/\//i.test(String(u ?? "")) ? String(u) : "#"; }
 
 async function ensureConfig() { if (!cfg) cfg = await api("/api/config"); return cfg; }
 
@@ -34,7 +47,7 @@ function refLinks(linksStr) {
   if (!links.length) return "";
   const items = links.map(u => {
     let host = u; try { host = new URL(u).host.replace(/^www\./, ""); } catch {}
-    return `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(host)}</a>`;
+    return `<a href="${esc(safeUrl(u))}" target="_blank" rel="noopener">${esc(host)}</a>`;
   }).join(" · ");
   return `<p class="refs">🔗 ${items}</p>`;
 }
@@ -64,7 +77,7 @@ async function renderItems() {
 
   view.innerHTML = head + items.map(it => `
     <div class="card">
-      <h3><a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.titre)}</a></h3>
+      <h3><a href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener">${esc(it.titre)}</a></h3>
       ${it.resume ? `<p>${esc(it.resume).slice(0, 240)}</p>` : ""}
       ${refLinks(it.links)}
       <div class="meta">
@@ -78,8 +91,10 @@ async function renderItems() {
   wireDev();
   view.querySelectorAll(".fav").forEach(b => b.onclick = async () => {
     const on = !b.classList.contains("on");
-    await api(`/api/items/${b.dataset.id}/flag`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ favori: on }) });
-    b.classList.toggle("on", on);
+    try {
+      await writeApi(`/api/items/${b.dataset.id}/flag`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ favori: on }) });
+      b.classList.toggle("on", on);
+    } catch (e) { setStatus("favori: " + e.message); }
   });
 }
 function wireDev() {
@@ -132,7 +147,7 @@ async function renderDrafts() {
       </div>
       <p class="fait">${esc(d.fait)}</p>
       <p class="angle"><strong>Angle :</strong> ${esc(d.angle)}</p>
-      <p class="src"><a href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.sources_line || d.url)}</a></p>
+      <p class="src"><a href="${esc(safeUrl(d.url))}" target="_blank" rel="noopener">${esc(d.sources_line || d.url)}</a></p>
       ${refLinks(d.links)}
       <div class="draft-actions">
         <button class="copy">📋 Copier</button>
@@ -227,16 +242,15 @@ async function renderReglages() {
       categories: collect("categories", "name", "keywords"),
     };
     try {
-      await api("/api/config", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      await writeApi("/api/config", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
       cfg = body;
       view.querySelector("#cfg-status").textContent = "enregistré ✓";
     } catch (e) { view.querySelector("#cfg-status").textContent = "erreur: " + e.message; }
   };
   view.querySelector("#reset-cfg").onclick = async () => {
     if (!confirm("Réinitialiser la config aux valeurs par défaut ?")) return;
-    await api("/api/config", { method: "DELETE" }).catch(() => {});
-    cfg = null;
-    location.reload();
+    try { await writeApi("/api/config", { method: "DELETE" }); cfg = null; location.reload(); }
+    catch (e) { view.querySelector("#cfg-status").textContent = "erreur: " + e.message; }
   };
 }
 

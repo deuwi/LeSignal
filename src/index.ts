@@ -42,17 +42,33 @@ app.get("/api/items", async (c) => {
 app.get("/api/config", async (c) => c.json(await loadConfig(c.env)));
 
 app.put("/api/config", async (c) => {
+  const unauth = await requireAdmin(c);
+  if (unauth) return unauth;
   const body = await c.req.json<Config>();
-  // validation minimale
+  // validation + bornes anti-ReDoS/abus (les motifs sont compilés en regex)
+  const MAX_ROWS = 60, MAX_PAT = 300, MAX_THESE = 3000;
   if (typeof body.freshness_days !== "number" || !Array.isArray(body.exclusions) || !Array.isArray(body.categories)) {
     return c.json({ ok: false, error: "config invalide" }, 400);
   }
+  if (body.freshness_days < 1 || body.freshness_days > 365) {
+    return c.json({ ok: false, error: "freshness_days hors bornes (1-365)" }, 400);
+  }
+  if (body.exclusions.length > MAX_ROWS || body.categories.length > MAX_ROWS) {
+    return c.json({ ok: false, error: "trop de règles" }, 400);
+  }
+  if ((body.these_keywords ?? "").length > MAX_THESE) {
+    return c.json({ ok: false, error: "these_keywords trop long" }, 400);
+  }
+  for (const e of body.exclusions) if ((e?.pattern ?? "").length > MAX_PAT) return c.json({ ok: false, error: "motif trop long" }, 400);
+  for (const ct of body.categories) if ((ct?.keywords ?? "").length > MAX_PAT) return c.json({ ok: false, error: "motif trop long" }, 400);
   await saveConfig(c.env, body);
   return c.json({ ok: true });
 });
 
 // Réinitialise: supprime l'override → loadConfig renverra les défauts
 app.delete("/api/config", async (c) => {
+  const unauth = await requireAdmin(c);
+  if (unauth) return unauth;
   await c.env.DB.prepare("DELETE FROM app_state WHERE key='config'").run();
   return c.json({ ok: true });
 });
@@ -73,8 +89,10 @@ app.get("/api/sources", async (c) => {
   return c.json(results);
 });
 
-// Marquer lu / favori (flux dev, lecture perso)
+// Marquer lu / favori (flux dev, lecture perso) — écriture, protégée
 app.post("/api/items/:id/flag", async (c) => {
+  const unauth = await requireAdmin(c);
+  if (unauth) return unauth;
   const id = Number(c.req.param("id"));
   const body = await c.req.json<{ lu?: boolean; favori?: boolean }>();
   const sets: string[] = [];
@@ -108,6 +126,8 @@ app.get("/api/drafts", async (c) => {
 // et le travail continue en tâche de fond (waitUntil), ce qui évite les coupures
 // client et garantit le stamp de fin de garde-fou.
 app.post("/api/daily", async (c) => {
+  const unauth = await requireAdmin(c);
+  if (unauth) return unauth;
   const force = c.req.query("force") === "1";
   if (!force && (await ranWithin(c.env, "daily", 20))) {
     return c.json({ skipped: true, reason: "passe déjà exécutée il y a moins de 20h" });
@@ -122,7 +142,7 @@ app.post("/api/daily", async (c) => {
 
 // Créer une fiche dans Notion — action d'ÉCRITURE, protégée par ADMIN_TOKEN.
 app.post("/api/drafts/:id/notion", async (c) => {
-  const unauth = requireAdmin(c);
+  const unauth = await requireAdmin(c);
   if (unauth) return unauth;
 
   const id = Number(c.req.param("id"));
@@ -148,7 +168,8 @@ app.post("/api/drafts/:id/notion", async (c) => {
       .bind(pageId, id).run();
     return c.json({ ok: true, notion_id: pageId });
   } catch (e) {
-    return c.json({ error: String(e) }, 502);
+    console.error("notion create error:", e); // détail côté serveur uniquement
+    return c.json({ error: "échec création Notion" }, 502);
   }
 });
 
