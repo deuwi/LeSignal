@@ -8,9 +8,8 @@ ce qui compte.
 [SPEC.md](SPEC.md) · Sources : [SOURCES.md](SOURCES.md)
 
 Cloudflare Workers + Hono + D1 + Cron + Assets. Dashboard vanilla JS (zéro
-build). Budget mini (pré-filtre heuristique avant tout appel LLM). Interface
-éditoriale « périodique imprimé », **bilingue FR/EN** et **mode clair/sombre**
-(préférence système par défaut, choix mémorisé).
+build). Budget mini. Interface éditoriale « périodique imprimé », **bilingue
+FR/EN** et **mode clair/sombre** (préférence système par défaut, choix mémorisé).
 
 ## La sélection
 
@@ -30,6 +29,9 @@ ingest (RSS/Atom + Hacker News)
 
 La config du pré-filtre (fraîcheur, exclusions, mots-clés, catégories) est
 **éditable dans l'onglet Réglages** et appliquée à la passe suivante.
+
+La **même passe quotidienne** enchaîne ensuite, pour l'Atelier, la lecture
+Notion (exclusion) puis la curation Haiku — voir ci-dessous.
 
 ## Atelier Deuwi (usage interne)
 
@@ -157,7 +159,7 @@ recommandée vu l'exposition publique).
 - ✅ Config éditable (Réglages), liens de référence, résumé dépliable
 - ✅ Interface « Le Signal » (bilingue, mode clair/sombre) déployée sur
   signal.deuwi.xyz
-- ⬜ Sources `search`/`scrape` (Cursor, Free-Work, APEC), France Travail
+- ⬜ Sources `search`/`scrape` (Cursor, Codex, Free-Work, APEC), France Travail
   (chiffres marché FR)
 - ⬜ Rate-limiting, rétro-remplissage EN des fiches antérieures
 
