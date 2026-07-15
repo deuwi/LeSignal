@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { Env } from "./types";
 import { runIngest } from "./ingest";
+import { runCurate } from "./curate";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -64,6 +65,58 @@ app.post("/api/run", async (c) => {
   const only = c.req.query("source");
   const report = await runIngest(c.env, only ? Number(only) : undefined);
   return c.json(report);
+});
+
+// --- Curation Deuwi (Phase 2) ---
+
+// Lance étages 3-4 (Haiku) sur les items retenus non encore curés. ?limit=
+app.post("/api/curate", async (c) => {
+  const limit = Math.min(Number(c.req.query("limit") ?? "15"), 40);
+  const report = await runCurate(c.env, limit);
+  return c.json(report);
+});
+
+// Fiches (drafts) pour le kanban Deuwi. ?statut=brouillon|valide|jete
+app.get("/api/drafts", async (c) => {
+  const statut = c.req.query("statut");
+  const where = statut ? "WHERE d.statut=?" : "";
+  const binds = statut ? [statut] : [];
+  const { results } = await c.env.DB.prepare(
+    `SELECT d.item_id, d.fait, d.angle, d.sources_line, d.statut, d.notion_id,
+            i.url, i.titre, i.date_pub,
+            v.chapitre, v.profil, v.chiffres_flag, v.score, s.nom AS source
+     FROM drafts d
+     JOIN items i ON i.id=d.item_id
+     LEFT JOIN verdicts v ON v.item_id=d.item_id
+     JOIN sources s ON s.id=i.source_id
+     ${where}
+     ORDER BY v.score DESC, i.date_pub DESC`
+  ).bind(...binds).all();
+  return c.json(results);
+});
+
+// Éditer une fiche (angle/fait réécrits à la main — semi-assisté)
+app.patch("/api/drafts/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  const b = await c.req.json<{ fait?: string; angle?: string; sources_line?: string }>();
+  const sets: string[] = [];
+  const binds: unknown[] = [];
+  for (const k of ["fait", "angle", "sources_line"] as const) {
+    if (b[k] !== undefined) { sets.push(`${k}=?`); binds.push(b[k]); }
+  }
+  if (!sets.length) return c.json({ ok: false }, 400);
+  sets.push("edite_le=datetime('now')");
+  await c.env.DB.prepare(`UPDATE drafts SET ${sets.join(",")} WHERE item_id=?`).bind(...binds, id).run();
+  return c.json({ ok: true });
+});
+
+// Valider / jeter une fiche
+app.post("/api/drafts/:id/status", async (c) => {
+  const id = Number(c.req.param("id"));
+  const { statut } = await c.req.json<{ statut: "brouillon" | "valide" | "jete" }>();
+  if (!["brouillon", "valide", "jete"].includes(statut)) return c.json({ ok: false }, 400);
+  await c.env.DB.prepare("UPDATE drafts SET statut=?, edite_le=datetime('now') WHERE item_id=?").bind(statut, id).run();
+  return c.json({ ok: true });
 });
 
 // Static assets (dashboard) en fallback

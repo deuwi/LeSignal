@@ -48,3 +48,19 @@ th { color: var(--muted); font-weight: 600; }
 .filters button { background: var(--panel); border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: .3rem .7rem; cursor: pointer; }
 .filters button.active { color: var(--accent); border-color: var(--accent); }
 .empty { color: var(--muted); text-align: center; padding: 3rem; }
+
+/* fiches Deuwi */
+.badge.accent { color: var(--accent); border-color: var(--accent); }
+.badge.flag-ok { color: var(--ok); border-color: var(--ok); }
+.badge.flag-a_verifier { color: var(--warn); border-color: var(--warn); }
+.badge.flag-inconnu { color: var(--muted); }
+.card.draft .fait { color: var(--fg); font-size: .95rem; }
+.card.draft .angle { color: var(--fg); background: #12151c; border-left: 2px solid var(--accent); padding: .5rem .7rem; border-radius: 0 6px 6px 0; }
+.card.draft [contenteditable]:focus { outline: 1px solid var(--accent); border-radius: 4px; }
+.card.draft .src { font-size: .8rem; }
+.card.draft .src a { color: var(--muted); }
+.draft-actions { display: flex; gap: .4rem; margin-top: .6rem; }
+.draft-actions button { padding: .3rem .7rem; }
+.draft-actions .ok { color: var(--ok); border-color: var(--ok); }
+.draft-actions .no { color: var(--bad); border-color: var(--bad); }
+#curate { border-color: var(--accent); color: var(--accent); }

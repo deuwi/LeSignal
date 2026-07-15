@@ -8,10 +8,13 @@ Cloudflare Workers + Hono + D1. Budget mini, semi-assisté.
 
 Conception : [SPEC.md](SPEC.md) · Sources : [SOURCES.md](SOURCES.md).
 
-## État — Phase 1
+## État — Phases 1-2
 
-Ingestion (RSS/Atom + Hacker News), dédup, pré-filtre heuristique (0 token), dashboard lecture.
-**Pas de LLM, pas de secret requis.** Curation LLM (Haiku) + Notion = phases suivantes.
+- **Phase 1** — ingestion (RSS/Atom + Hacker News), dédup, pré-filtre heuristique (0 token), dashboard lecture.
+- **Phase 2** — pipeline Deuwi : fetch source complète + Haiku (score, chapitre, profil, vérif chiffres) + draft angle, kanban de validation (brouillon/validé/jeté), édition inline.
+
+Phase 2 nécessite `ANTHROPIC_API_KEY` dans `.dev.vars` (local) ou secret Worker (prod).
+Notion (sync) = Phase 3.
 
 ## Prérequis
 
@@ -54,7 +57,7 @@ voir [.dev.vars.example](.dev.vars.example). Secrets de prod via `wrangler secre
 ## Roadmap
 
 1. ✅ Socle ingest + dédup + filtre + dashboard lecture
-2. Pipeline `deuwi` : fetch source + Haiku (score, chapitre, vérif chiffres) + draft angle + validation
+2. ✅ Pipeline `deuwi` : fetch source + Haiku (score, chapitre, vérif chiffres) + draft angle + validation
 3. Sync Notion (upsert anti-doublon)
 4. Cron polish, sources `search`/`scrape`, France Travail
 
