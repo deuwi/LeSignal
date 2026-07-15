@@ -96,23 +96,14 @@ function copyCells(d) {
   ];
 }
 
-// Copie un tableau 1 ligne: HTML <table> (mapping colonnes Notion) + TSV en repli.
+// Copie au format TABULAIRE (TSV): 1 ligne, valeurs séparées par des tabulations.
+// C'est ce que Notion découpe en colonnes au collage (le HTML <table> ferait un
+// bloc imbriqué au lieu de remplir les colonnes). Ordre = colonnes Notion.
 async function copyRow(d) {
-  const cells = copyCells(d);
-  const tsv = cells.map(c => String(c).replace(/\t/g, " ").replace(/\r?\n/g, " ")).join("\t");
-  const html = `<table><tbody><tr>${cells.map(c => `<td>${esc(c)}</td>`).join("")}</tr></tbody></table>`;
-  try {
-    if (window.ClipboardItem) {
-      await navigator.clipboard.write([new ClipboardItem({
-        "text/html": new Blob([html], { type: "text/html" }),
-        "text/plain": new Blob([tsv], { type: "text/plain" }),
-      })]);
-    } else {
-      await navigator.clipboard.writeText(tsv);
-    }
-  } catch {
-    await navigator.clipboard.writeText(tsv);
-  }
+  const tsv = copyCells(d)
+    .map(c => String(c).replace(/[\t\r\n]+/g, " ").trim())
+    .join("\t");
+  await navigator.clipboard.writeText(tsv);
 }
 
 async function renderDrafts() {
