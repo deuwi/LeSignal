@@ -19,7 +19,7 @@ const I18N = {
     edition: "ÉDITION",
     nav_dev: "La sélection", nav_deuwi: "Atelier Deuwi", nav_sources: "Sources", nav_reglages: "Réglages",
     method: "Une passe quotidienne, dédoublonnée, sans chiffre non sourcé.",
-    footlinks: "veille.deuwi.xyz · Sources · À propos · LinkedIn",
+    about: "À propos",
     status_auto: "Mise à jour automatique quotidienne",
     standfirst: "L'IA ne prendra pas ton job — quelqu'un qui la dirige mieux que toi, peut-être. Sans hype, sans peur, sans promesse chiffrée.",
     aside_label: "Le bruit qu'on a coupé",
@@ -45,7 +45,7 @@ const I18N = {
     edition: "EDITION",
     nav_dev: "The selection", nav_deuwi: "Deuwi Workshop", nav_sources: "Sources", nav_reglages: "Settings",
     method: "One daily pass, de-duplicated, no unsourced figure.",
-    footlinks: "veille.deuwi.xyz · Sources · About · LinkedIn",
+    about: "About",
     status_auto: "Automatic daily update",
     standfirst: "AI won't take your job — someone who directs it better than you might. No hype, no fear, no headline numbers.",
     aside_label: "The noise we cut",
@@ -325,15 +325,14 @@ function applyLang() {
   document.getElementById("t-edition").textContent =
     t("edition") + " · " + now.toLocaleDateString(locale(), { day: "numeric", month: "long", year: "numeric" }).toUpperCase();
   document.getElementById("t-method").textContent = t("method");
-  document.getElementById("t-footlinks").textContent = t("footlinks");
-  document.querySelectorAll("nav [data-i18n]").forEach(b => b.textContent = t(b.dataset.i18n));
+  document.querySelectorAll("[data-i18n]").forEach(b => b.textContent = t(b.dataset.i18n));
   document.querySelectorAll("#lang [data-lang]").forEach(b => b.classList.toggle("active", b.dataset.lang === lang));
   setStatus(t("status_auto"));
 }
 
-document.querySelectorAll("nav button[data-tab]").forEach(b => b.onclick = () => {
+document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => {
   tab = b.dataset.tab;
-  document.querySelectorAll("nav button[data-tab]").forEach(x => x.classList.toggle("active", x === b));
+  document.querySelectorAll("[data-tab]").forEach(x => x.classList.toggle("active", x === b));
   render();
 });
 document.querySelectorAll("#lang [data-lang]").forEach(b => b.onclick = () => {

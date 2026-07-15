@@ -240,6 +240,12 @@ tr.off{ opacity:.45; }
   font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size:10px; text-transform:uppercase; letter-spacing:.14em; color:var(--muted);
 }
+.foot-links .foot-tab{
+  background:none; border:none; cursor:pointer; padding:0;
+  font:inherit; text-transform:uppercase; letter-spacing:.14em; color:var(--muted);
+}
+.foot-links .foot-tab:hover{ color:var(--navy); text-decoration:underline; text-underline-offset:3px; }
+.foot-links .foot-tab.active{ color:var(--navy); text-decoration:underline; text-underline-offset:3px; }
 
 @media (max-width:640px){
   .wordmark{ font-size:52px; }
