@@ -24,6 +24,7 @@ const I18N = {
     standfirst: "L'IA ne prendra pas ton job — quelqu'un qui la dirige mieux que toi, peut-être. Sans hype, sans peur, sans promesse chiffrée.",
     aside_label: "Le bruit qu'on a coupé",
     aside_text: "Ce que le pré-filtre écarte, sans exception : « l'IA va remplacer les devs », les formations à six chiffres, l'énième sortie iPhone, le drama tech, la politique.",
+    read_more: "lire ↓", read_less: "replier ↑",
     f_retenu: "retenus", f_rejete: "écartés", f_all: "tout",
     chip_all: "Tout", chip_fav: "Favoris",
     empty_dev: "Aucune entrée pour ce filtre.",
@@ -50,6 +51,7 @@ const I18N = {
     standfirst: "AI won't take your job — someone who directs it better than you might. No hype, no fear, no headline numbers.",
     aside_label: "The noise we cut",
     aside_text: "What the pre-filter drops, without exception: “AI will replace developers”, six-figure bootcamps, the umpteenth iPhone launch, tech drama, politics.",
+    read_more: "read ↓", read_less: "collapse ↑",
     f_retenu: "kept", f_rejete: "dropped", f_all: "all",
     chip_all: "All", chip_fav: "Favourites",
     empty_dev: "No entry for this filter.",
@@ -149,12 +151,19 @@ async function renderItems() {
       <div class="entry-main">
         ${cat ? `<div class="kicker-cat">${esc(cat)}</div>` : ""}
         <h3><a href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener">${esc(it.titre)}</a></h3>
-        ${it.resume ? `<p class="sum">${esc(it.resume).slice(0, 240)}</p>` : ""}
+        ${it.resume ? (it.resume.length > 180
+          ? `<p class="sum clamp">${esc(it.resume)}</p><button type="button" class="more">${esc(t("read_more"))}</button>`
+          : `<p class="sum">${esc(it.resume)}</p>`) : ""}
         ${refLinks(it.links)}
       </div>
     </article>`;
   }).join("");
   wireDev();
+  view.querySelectorAll(".more").forEach(b => b.onclick = () => {
+    const sum = b.previousElementSibling;
+    const collapsed = sum.classList.toggle("clamp"); // true = replié
+    b.textContent = collapsed ? t("read_more") : t("read_less");
+  });
   view.querySelectorAll(".fav").forEach(b => b.onclick = async () => {
     const on = !b.classList.contains("on");
     try {

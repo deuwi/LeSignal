@@ -117,7 +117,14 @@ main{ max-width:1060px; margin:0 auto; padding:1.8rem 1.5rem 2rem; }
 .entry-main h3{ margin:0 0 .35rem; font:normal 22px/1.32 Georgia, serif; }
 .entry-main h3 a{ color:var(--ink); }
 .entry-main h3 a:hover{ color:var(--navy); }
-.entry-main .sum{ margin:.2rem 0 .5rem; color:var(--sub); font-size:16px; }
+.entry-main .sum{ margin:.2rem 0 .3rem; color:var(--sub); font-size:16px; }
+.entry-main .sum.clamp{ display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+.entry-main .more{
+  background:none; border:none; cursor:pointer; padding:0; margin:0 0 .5rem;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size:10px; text-transform:uppercase; letter-spacing:.12em; color:var(--navy);
+}
+.entry-main .more:hover{ text-decoration:underline; text-underline-offset:3px; }
 
 .refs{
   margin:.3rem 0 0;
