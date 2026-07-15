@@ -108,7 +108,7 @@ app.post("/api/items/:id/flag", async (c) => {
 app.get("/api/drafts", async (c) => {
   const statut = c.req.query("statut") ?? "propose";
   const { results } = await c.env.DB.prepare(
-    `SELECT d.item_id, d.fait, d.angle, d.sources_line, d.statut,
+    `SELECT d.item_id, d.fait, d.angle, d.fait_en, d.angle_en, d.sources_line, d.statut,
             i.url, i.titre, i.date_pub, i.links,
             v.chapitre, v.profil, v.chiffres_flag, v.score, s.nom AS source
      FROM drafts d

@@ -201,6 +201,8 @@ async function renderDrafts() {
     drafts.map(d => {
       const chap = d.chapitre ? `CH. ${d.chapitre} — ${esc(CHAP[d.chapitre] || "")}` : esc(t("none_chap"));
       const flag = d.chiffres_flag ? `${esc(CHIFFRES[d.chiffres_flag] || "?")}` : esc(t("no_figures"));
+      const dfait = (lang === "en" && d.fait_en) ? d.fait_en : d.fait;
+      const dangle = (lang === "en" && d.angle_en) ? d.angle_en : d.angle;
       return `
     <article class="entry draft" data-id="${d.item_id}">
       <div class="badges">
@@ -209,8 +211,8 @@ async function renderDrafts() {
         <span class="badge flag-${d.chiffres_flag || "inconnu"}">${flag}</span>
         <span class="right">${esc(d.source)} · ${esc(fmtDate(d.date_pub))} · ${t("score")} ${d.score != null ? d.score.toFixed(2) : "—"}</span>
       </div>
-      <p class="fait">${esc(d.fait)}</p>
-      <div class="angle"><span class="label">Angle</span>${esc(d.angle)}</div>
+      <p class="fait">${esc(dfait)}</p>
+      <div class="angle"><span class="label">Angle</span>${esc(dangle)}</div>
       <p class="src">${esc(t("src_label"))} : <a href="${esc(safeUrl(d.url))}" target="_blank" rel="noopener">${esc((d.sources_line || d.url).replace(/^\s*sources?\s*:\s*/i, ""))}</a></p>
       ${refLinks(d.links)}
       <div class="draft-actions">

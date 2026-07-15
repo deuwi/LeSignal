@@ -17,6 +17,8 @@ interface DraftOut {
   fait: string;
   angle: string;
   sources_line: string;
+  fait_en?: string;
+  angle_en?: string;
 }
 
 interface ItemRow {
@@ -90,17 +92,19 @@ export async function runCurate(env: Env, limit = 40, excludeUrls: Set<string> =
       }
       report.pertinents++;
 
-      // Étage 4 — draft angle
+      // Étage 4 — draft angle (FR + EN dans un seul appel)
       const draft = await askJson<DraftOut>(
         env, DRAFT_SYSTEM,
-        draftUser(it.titre, it.url, it.date_pub, score.chapitre, score.profil, contenu)
+        draftUser(it.titre, it.url, it.date_pub, score.chapitre, score.profil, contenu),
+        1100
       );
       await env.DB.prepare(
-        `INSERT INTO drafts (item_id, fait, angle, sources_line, statut, edite_le)
-         VALUES (?, ?, ?, ?, 'propose', datetime('now'))
+        `INSERT INTO drafts (item_id, fait, angle, sources_line, fait_en, angle_en, statut, edite_le)
+         VALUES (?, ?, ?, ?, ?, ?, 'propose', datetime('now'))
          ON CONFLICT(item_id) DO UPDATE SET
-           fait=excluded.fait, angle=excluded.angle, sources_line=excluded.sources_line`
-      ).bind(it.id, draft.fait, draft.angle, draft.sources_line).run();
+           fait=excluded.fait, angle=excluded.angle, sources_line=excluded.sources_line,
+           fait_en=excluded.fait_en, angle_en=excluded.angle_en`
+      ).bind(it.id, draft.fait, draft.angle, draft.sources_line, draft.fait_en ?? null, draft.angle_en ?? null).run();
 
       await env.DB.prepare("UPDATE items SET statut='cure' WHERE id=?").bind(it.id).run();
       report.drafts++;

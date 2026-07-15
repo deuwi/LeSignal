@@ -36,7 +36,8 @@ export const DRAFT_SYSTEM =
   `Ton: factuel, sans hype, sans peur. Français.\n` +
   `Tout chiffre non sourcé proprement dans le contenu: écris 'À VÉRIFIER' au lieu du chiffre.\n\n` +
   `Réponds UNIQUEMENT un JSON:\n` +
-  `{"fait":"1 ligne factuelle + (source, date)","angle":"angle de post concret aligné thèse + le profil ciblé","sources_line":"Sources: <titre> — <url> (<date>)"}`;
+  `{"fait":"1 ligne factuelle + (source, date)","angle":"angle de post concret aligné thèse + le profil ciblé","sources_line":"Sources: <titre> — <url> (<date>)","fait_en":"traduction anglaise fidèle de fait","angle_en":"traduction anglaise fidèle de angle"}\n` +
+  `fait_en et angle_en = mêmes contenus que fait et angle, traduits en anglais naturel (garde 'À VÉRIFIER' → 'TO VERIFY').`;
 
 export function draftUser(
   titre: string,
