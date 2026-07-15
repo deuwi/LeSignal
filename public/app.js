@@ -77,6 +77,8 @@ async function renderDrafts() {
         ${d.statut !== "valide" ? `<button class="ok" data-s="valide">✓ Valider</button>` : ""}
         ${d.statut !== "jete" ? `<button class="no" data-s="jete">✕ Jeter</button>` : ""}
         ${d.statut !== "brouillon" ? `<button class="back" data-s="brouillon">↩ Brouillon</button>` : ""}
+        ${d.statut === "valide" ? `<button class="notion">${d.notion_id ? "↻ Resync Notion" : "⇪ Push Notion"}</button>` : ""}
+        ${d.notion_id ? `<span class="badge flag-ok">↗ Notion</span>` : ""}
       </div>
     </div>`).join("");
   wireDraftFilters();
@@ -93,6 +95,15 @@ async function renderDrafts() {
       await api(`/api/drafts/${id}/status`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ statut: b.dataset.s }) });
       renderDrafts();
     });
+    const nb = card.querySelector(".notion");
+    if (nb) nb.onclick = async () => {
+      setStatus("push Notion…");
+      try {
+        const r = await api(`/api/notion/sync?item=${id}`, { method: "POST" });
+        if (r.errors && r.errors.length) { alert("Notion erreur:\n" + r.errors.map(e => e.error).join("\n")); setStatus("Notion: erreur"); }
+        else { setStatus(`Notion: ${r.crees} créée${r.crees > 1 ? "s" : ""}, ${r.maj} màj`); renderDrafts(); }
+      } catch (e) { setStatus("Notion: " + e.message); alert("Notion: " + e.message); }
+    };
   });
 }
 function wireDraftFilters() {

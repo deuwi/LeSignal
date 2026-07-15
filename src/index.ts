@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import type { Env } from "./types";
 import { runIngest } from "./ingest";
 import { runCurate } from "./curate";
+import { runNotionSync } from "./notion/sync";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -117,6 +118,13 @@ app.post("/api/drafts/:id/status", async (c) => {
   if (!["brouillon", "valide", "jete"].includes(statut)) return c.json({ ok: false }, 400);
   await c.env.DB.prepare("UPDATE drafts SET statut=?, edite_le=datetime('now') WHERE item_id=?").bind(statut, id).run();
   return c.json({ ok: true });
+});
+
+// Sync Notion des fiches validées. ?item=<id> pour une seule.
+app.post("/api/notion/sync", async (c) => {
+  const item = c.req.query("item");
+  const report = await runNotionSync(c.env, item ? Number(item) : undefined);
+  return c.json(report);
 });
 
 // Static assets (dashboard) en fallback
