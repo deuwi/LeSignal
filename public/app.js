@@ -82,18 +82,37 @@ function wireDev() {
 }
 
 // --- onglet Deuwi (lecture seule + copier) ---
-function copyText(d) {
-  const chap = d.chapitre ? `${d.chapitre} — ${CHAP[d.chapitre] || ""}`.trim() : "aucun";
-  const refs = parseJson(d.links, []);
+const PROFIL_LABEL = { junior: "junior", confirme: "confirmé", reconverti: "reconverti", freelance: "freelance" };
+
+// Cellules dans l'ordre des colonnes Notion: Fait | Angle | Chapitre | Profil | Chiffres | Source
+function copyCells(d) {
   return [
-    `Fait : ${d.fait}`,
-    `Angle : ${d.angle}`,
-    `Chapitre : ${chap}`,
-    `Profil : ${d.profil || "—"}`,
-    `Chiffres : ${CHIFFRES[d.chiffres_flag] || "—"}`,
-    `Source : ${d.url}`,
-    refs.length ? `Références : ${refs.join(" , ")}` : "",
-  ].filter(Boolean).join("\n");
+    d.fait || "",
+    d.angle || "",
+    d.chapitre ? String(d.chapitre) : "aucun",
+    PROFIL_LABEL[d.profil] || d.profil || "",
+    CHIFFRES[d.chiffres_flag] || "",
+    d.url || "",
+  ];
+}
+
+// Copie un tableau 1 ligne: HTML <table> (mapping colonnes Notion) + TSV en repli.
+async function copyRow(d) {
+  const cells = copyCells(d);
+  const tsv = cells.map(c => String(c).replace(/\t/g, " ").replace(/\r?\n/g, " ")).join("\t");
+  const html = `<table><tbody><tr>${cells.map(c => `<td>${esc(c)}</td>`).join("")}</tr></tbody></table>`;
+  try {
+    if (window.ClipboardItem) {
+      await navigator.clipboard.write([new ClipboardItem({
+        "text/html": new Blob([html], { type: "text/html" }),
+        "text/plain": new Blob([tsv], { type: "text/plain" }),
+      })]);
+    } else {
+      await navigator.clipboard.writeText(tsv);
+    }
+  } catch {
+    await navigator.clipboard.writeText(tsv);
+  }
 }
 
 async function renderDrafts() {
@@ -124,10 +143,10 @@ async function renderDrafts() {
   view.querySelectorAll(".card.draft").forEach((card, i) => {
     card.querySelector(".copy").onclick = async () => {
       try {
-        await navigator.clipboard.writeText(copyText(drafts[i]));
+        await copyRow(drafts[i]);
         card.classList.add("copied");
         card.querySelector(".copy").textContent = "✓ Copié";
-        setStatus("copié dans le presse-papier");
+        setStatus("ligne copiée — colle dans la vue Table Notion");
       } catch (e) { setStatus("copie impossible: " + e.message); }
     };
   });
