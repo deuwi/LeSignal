@@ -8,6 +8,9 @@ const TOKEN_URL =
 // Scopes confirmés en prod.
 export const SCOPE_OFFRES = "api_offresdemploiv2 o2dsoffre";
 export const SCOPE_ROME = "api_rome-metiersv1 nomenclatureRome";
+// Marché du travail (stats offres-demandes) — scope + droit applicatif
+// (confirmés via le securityScheme OpenAPI de l'API).
+export const SCOPE_STATS = "api_stats-offres-demandes-emploiv1 offresetdemandesemploi";
 
 export async function getFtAccessToken(env: Env, scope: string): Promise<string> {
   if (!env.FT_CLIENT_ID || !env.FT_CLIENT_SECRET) throw new Error("FT creds absents");

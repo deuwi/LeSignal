@@ -5,6 +5,7 @@ import { fetchFeed } from "./feeds";
 import { fetchHN } from "./hn";
 import { fetchBrave } from "./brave";
 import { fetchFranceTravail } from "../ft/offres";
+import { fetchFtTension, type Territoire } from "../ft/tension";
 import { ranWithin, stamp } from "../state";
 import { itemHash } from "./dedup";
 import { filterItem, categorize, compile } from "./filter";
@@ -113,12 +114,15 @@ async function fetchSource(src: Source, env: Env): Promise<RawItem[]> {
         return fetchHN(cfg, since);
       }
       if (cfg.kind === "francetravail") {
-        // Volumes mensuels → passe mensuelle (évite le spam quotidien).
+        // Volumes + tension = chiffres mensuels → passe mensuelle (évite le spam quotidien).
         if (await ranWithin(env, "ft", 25 * 24)) return [];
         const codes: string[] = cfg.romeCodes ?? ["M1805", "M1802", "M1810", "M1806"];
-        const items = await fetchFranceTravail(env, codes, new Date().toISOString());
+        const terr: Territoire = cfg.territoire ?? { type: "NAT", code: "FR" };
+        const nowIso = new Date().toISOString();
+        const offres = await fetchFranceTravail(env, codes, nowIso);
+        const tension = await fetchFtTension(env, codes, terr, nowIso);
         await stamp(env, "ft");
-        return items;
+        return [...offres, ...tension];
       }
       return [];
     }

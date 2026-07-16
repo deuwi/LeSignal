@@ -164,8 +164,8 @@ Configurée hors dépôt (dashboard Cloudflare → Security rules → Rate limit
 - ✅ Rate-limiting (règle WAF Cloudflare : 100 req/10 s par IP sur `/api/*`, à l'edge)
 - ✅ Sources `search` via Brave (Cursor, Codex, Free-Work, APEC)
 - ✅ France Travail — volume d'offres dev par code ROME (API Offres, passe mensuelle)
-- ⬜ France Travail — tension par métier (scope « Marché du travail » à récupérer)
-- ⬜ Rétro-remplissage EN des fiches antérieures
+- ✅ France Travail — tension de recrutement par métier (API Marché du travail,
+  indicateur PERSP_2, niveau 1–5, France entière, passe mensuelle)
 
 ## Licence
 
