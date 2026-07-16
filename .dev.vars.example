@@ -12,6 +12,10 @@ NOTION_DB_ID=
 # Mets une longue chaîne aléatoire. Saisie 1× dans le dashboard (localStorage).
 ADMIN_TOKEN=
 
+# Sources `search` (Cursor, Codex, Free-Work, APEC) via Brave Search API
+# Clé gratuite : brave.com/search/api
+BRAVE_API_KEY=
+
 # Optionnel — France Travail (source chiffres marché FR)
 FT_CLIENT_ID=
 FT_CLIENT_SECRET=

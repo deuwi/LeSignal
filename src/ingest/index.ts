@@ -3,6 +3,7 @@
 import type { Env, Source, RawItem, Flux } from "../types";
 import { fetchFeed } from "./feeds";
 import { fetchHN } from "./hn";
+import { fetchBrave } from "./brave";
 import { itemHash } from "./dedup";
 import { filterItem, categorize, compile } from "./filter";
 import { extractLinks, stripTags } from "./links";
@@ -35,7 +36,7 @@ export async function runIngest(env: Env, onlySourceId?: number): Promise<RunRep
   for (const src of results) {
     let raw: RawItem[] = [];
     try {
-      raw = await fetchSource(src);
+      raw = await fetchSource(src, env);
     } catch (e) {
       report.errors.push({ source: src.nom, error: String(e) });
       continue;
@@ -92,11 +93,16 @@ export async function runIngest(env: Env, onlySourceId?: number): Promise<RunRep
   return report;
 }
 
-async function fetchSource(src: Source): Promise<RawItem[]> {
+async function fetchSource(src: Source, env: Env): Promise<RawItem[]> {
   switch (src.type) {
     case "rss":
     case "atom":
       return fetchFeed(src.url);
+    case "search": {
+      const cfg = src.config ? JSON.parse(src.config) : {};
+      if (!cfg.query) return [];
+      return fetchBrave(env, cfg.query);
+    }
     case "api": {
       const cfg = src.config ? JSON.parse(src.config) : {};
       if (cfg.kind === "hn") {
@@ -107,7 +113,7 @@ async function fetchSource(src: Source): Promise<RawItem[]> {
       // francetravail etc. — Phase ultérieure
       return [];
     }
-    // search / scrape — Phase 2+ (WebSearch/scrape). Ignorés en Phase 1.
+    // scrape — non couvert (contenu JS, cf. SOURCES.md)
     default:
       return [];
   }

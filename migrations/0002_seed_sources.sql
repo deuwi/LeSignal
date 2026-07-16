@@ -14,8 +14,8 @@ INSERT OR REPLACE INTO sources (id, type, nom, url, flux, rank, config, actif) V
 (8,'rss','GitHub changelog','https://github.blog/changelog/feed/','both',3,NULL,1),
 (9,'atom','MCP releases','https://github.com/modelcontextprotocol/modelcontextprotocol/releases.atom','both',3,NULL,1),
 (10,'atom','Simon Willison','https://simonwillison.net/atom/everything/','both',2,NULL,1),
-(11,'search','Cursor changelog','Cursor editor changelog release','both',3,'{"query":"Cursor editor changelog release features"}',0),
-(12,'search','OpenAI Codex news','OpenAI Codex coding agent release','both',3,'{"query":"OpenAI Codex coding agent release"}',0),
+(11,'search','Cursor changelog','Cursor editor changelog release','both',3,'{"query":"Cursor editor changelog release features"}',1),
+(12,'search','OpenAI Codex news','OpenAI Codex coding agent release','both',3,'{"query":"OpenAI Codex coding agent release"}',1),
 -- web / cloud
 (13,'rss','Cloudflare blog','https://blog.cloudflare.com/rss/','dev',3,NULL,1),
 (14,'rss','React blog','https://react.dev/rss.xml','dev',3,NULL,1),
@@ -30,5 +30,5 @@ INSERT OR REPLACE INTO sources (id, type, nom, url, flux, rank, config, actif) V
 -- marché / FR
 (22,'api','Hacker News','https://hn.algolia.com/api/v1/search_by_date','deuwi',1,'{"kind":"hn","queries":["AI developer jobs","layoffs engineers","claude code","cursor AI","AI coding productivity"],"min_points":50}',1),
 (23,'api','France Travail tensions','francetravail.io','deuwi',3,'{"kind":"francetravail","rome":["M1805","M1802"],"needs_secret":true}',0),
-(24,'search','Free-Work marché','Free-Work marché freelance développeur IA','deuwi',2,'{"query":"Free-Work marché freelance développeur IA France"}',0),
-(25,'scrape','APEC études','https://corporate.apec.fr/toutes-nos-etudes','deuwi',3,NULL,0);
+(24,'search','Free-Work marché','Free-Work marché freelance développeur IA','deuwi',2,'{"query":"Free-Work marché freelance développeur IA France"}',1),
+(25,'search','APEC études','APEC étude emploi cadres','deuwi',3,'{"query":"APEC étude emploi cadres marché"}',1);
