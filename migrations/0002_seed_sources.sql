@@ -29,6 +29,6 @@ INSERT OR REPLACE INTO sources (id, type, nom, url, flux, rank, config, actif) V
 (21,'rss','METR','https://metr.org/feed.xml','deuwi',3,NULL,1),
 -- marché / FR
 (22,'api','Hacker News','https://hn.algolia.com/api/v1/search_by_date','deuwi',1,'{"kind":"hn","queries":["AI developer jobs","layoffs engineers","claude code","cursor AI","AI coding productivity"],"min_points":50}',1),
-(23,'api','France Travail tensions','francetravail.io','deuwi',3,'{"kind":"francetravail","rome":["M1805","M1802"],"needs_secret":true}',0),
+(23,'api','France Travail — offres dev','francetravail.io','deuwi',3,'{"kind":"francetravail","romeCodes":["M1805","M1802","M1810","M1806"]}',1),
 (24,'search','Free-Work marché','Free-Work marché freelance développeur IA','deuwi',2,'{"query":"Free-Work marché freelance développeur IA France"}',1),
 (25,'search','APEC études','APEC étude emploi cadres','deuwi',3,'{"query":"APEC étude emploi cadres marché"}',1);

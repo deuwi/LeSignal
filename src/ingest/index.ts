@@ -4,6 +4,8 @@ import type { Env, Source, RawItem, Flux } from "../types";
 import { fetchFeed } from "./feeds";
 import { fetchHN } from "./hn";
 import { fetchBrave } from "./brave";
+import { fetchFranceTravail } from "../ft/offres";
+import { ranWithin, stamp } from "../state";
 import { itemHash } from "./dedup";
 import { filterItem, categorize, compile } from "./filter";
 import { extractLinks, stripTags } from "./links";
@@ -110,7 +112,14 @@ async function fetchSource(src: Source, env: Env): Promise<RawItem[]> {
         const since = Math.floor((now - 7 * 86_400_000) / 1000);
         return fetchHN(cfg, since);
       }
-      // francetravail etc. — Phase ultérieure
+      if (cfg.kind === "francetravail") {
+        // Volumes mensuels → passe mensuelle (évite le spam quotidien).
+        if (await ranWithin(env, "ft", 25 * 24)) return [];
+        const codes: string[] = cfg.romeCodes ?? ["M1805", "M1802", "M1810", "M1806"];
+        const items = await fetchFranceTravail(env, codes, new Date().toISOString());
+        await stamp(env, "ft");
+        return items;
+      }
       return [];
     }
     // scrape — non couvert (contenu JS, cf. SOURCES.md)
