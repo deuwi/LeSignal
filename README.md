@@ -22,7 +22,7 @@ qui bouge. Une passe quotidienne (cron, 07:00 UTC) ingère, dédup, filtre et
 catégorise, sans bouton d'exécution public :
 
 ```
-ingest (RSS/Atom + Hacker News)
+ingest (RSS/Atom + Hacker News + recherche Brave + France Travail)
   → dédup (hash URL normalisée + titre)
   → pré-filtre heuristique 0 token (fraîcheur · exclusions · pertinence) + catégorisation
 ```
@@ -41,6 +41,10 @@ chapitre de référence et profil ciblé, en FR et EN. Il alimente directement
 mon écriture LinkedIn et s'exporte en CSV ou vers Notion. Pas conçu
 pour un usage tiers, mais rien n'est caché : le code et la logique sont dans
 ce même repo.
+
+Ce flux intègre aussi des **chiffres marché francophones sourcés** (France
+Travail, passe mensuelle) : volume d'offres actives et **indice de tension de
+recrutement** (1–5) par métier dev (codes ROME éditables en config).
 
 ### Notion (pour l'Atelier)
 
@@ -73,7 +77,9 @@ npm run dev                            # http://localhost:8787
 Secrets locaux dans `.dev.vars` (gitignoré, voir
 [.dev.vars.example](.dev.vars.example)) : `ANTHROPIC_API_KEY` (curation),
 `NOTION_TOKEN` + `NOTION_DB_ID` (Notion), `ADMIN_TOKEN` (protège les
-écritures).
+écritures), `BRAVE_API_KEY` (sources recherche), `FT_CLIENT_ID` +
+`FT_CLIENT_SECRET` (France Travail). Tous optionnels sauf `ANTHROPIC` : sans
+Brave ou France Travail, ces sources sont simplement ignorées.
 
 Déclencher une passe en dev (l'endpoint est protégé — en-tête
 `X-Admin-Token`) :
@@ -92,6 +98,9 @@ npx wrangler secret put ANTHROPIC_API_KEY
 npx wrangler secret put NOTION_TOKEN
 npx wrangler secret put NOTION_DB_ID
 npx wrangler secret put ADMIN_TOKEN
+npx wrangler secret put BRAVE_API_KEY       # optionnel — sources recherche
+npx wrangler secret put FT_CLIENT_ID        # optionnel — France Travail
+npx wrangler secret put FT_CLIENT_SECRET
 ```
 
 Cron quotidien (07:00 UTC) et custom domain `signal.deuwi.xyz` configurés
@@ -118,6 +127,7 @@ L'app est déployée **publiquement**. La séparation est simple :
 | `/api/config`            | PUT / DELETE | ✅   | modifie/réinitialise les filtres (regex → ReDoS possible) |
 | `/api/daily`             | POST         | ✅   | déclenche ingestion + curation Haiku (coût $)             |
 | `/api/items/:id/flag`    | POST         | ✅   | écrit en base (lu/favori)                                 |
+| `/api/backfill-en`       | POST         | ✅   | traduit en EN les fiches (coût $)                         |
 | lectures + dashboard     | GET          | ❌   | —                                                         |
 
 **Comment ça marche** ([src/auth.ts](src/auth.ts)) :
