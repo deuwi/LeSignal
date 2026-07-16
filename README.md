@@ -162,8 +162,9 @@ Configurée hors dépôt (dashboard Cloudflare → Security rules → Rate limit
 - ✅ Interface « Le Signal » (bilingue, mode clair/sombre) déployée sur
   signal.deuwi.xyz
 - ✅ Rate-limiting (règle WAF Cloudflare : 100 req/10 s par IP sur `/api/*`, à l'edge)
-- ⬜ Sources `search`/`scrape` (Cursor, Codex, Free-Work, APEC), France Travail
-  (chiffres marché FR)
+- ✅ Sources `search` via Brave (Cursor, Codex, Free-Work, APEC)
+- ✅ France Travail — volume d'offres dev par code ROME (API Offres, passe mensuelle)
+- ⬜ France Travail — tension par métier (scope « Marché du travail » à récupérer)
 - ⬜ Rétro-remplissage EN des fiches antérieures
 
 ## Licence
