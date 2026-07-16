@@ -5,6 +5,7 @@ import { ranWithin } from "./state";
 import { loadConfig, saveConfig, type Config } from "./config";
 import { requireAdmin } from "./auth";
 import { createNotionPage } from "./notion/write";
+import { runBackfillEn } from "./curate/backfill";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -171,6 +172,15 @@ app.post("/api/drafts/:id/notion", async (c) => {
     console.error("notion create error:", e); // détail côté serveur uniquement
     return c.json({ error: "échec création Notion" }, 502);
   }
+});
+
+// One-shot : traduit en EN les fiches sans version anglaise. ?limit=<=40. Protégé.
+app.post("/api/backfill-en", async (c) => {
+  const unauth = await requireAdmin(c);
+  if (unauth) return unauth;
+  const limit = Math.min(Number(c.req.query("limit") ?? "40"), 40);
+  const report = await runBackfillEn(c.env, limit);
+  return c.json(report);
 });
 
 // Static assets (dashboard) en fallback
