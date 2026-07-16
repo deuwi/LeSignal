@@ -143,8 +143,10 @@ nb de règles, fraîcheur 1-365) contre le ReDoS ; `safeUrl` côté client
 bloque les href `javascript:`/`data:` ; erreurs internes loggées serveur,
 message générique au client.
 
-**Non couvert** (à ajouter si besoin) : rate-limiting (règle Cloudflare
-recommandée vu l'exposition publique).
+**Rate-limiting** : règle WAF Cloudflare au niveau de la zone —
+`100 requêtes / 10 s` par IP sur `/api/*`, action **Block**. Elle s'applique à
+l'**edge, avant le Worker** (protège aussi le quota Workers et le coût Haiku).
+Configurée hors dépôt (dashboard Cloudflare → Security rules → Rate limiting).
 
 ## État
 
@@ -159,9 +161,10 @@ recommandée vu l'exposition publique).
 - ✅ Config éditable (Réglages), liens de référence, résumé dépliable
 - ✅ Interface « Le Signal » (bilingue, mode clair/sombre) déployée sur
   signal.deuwi.xyz
+- ✅ Rate-limiting (règle WAF Cloudflare : 100 req/10 s par IP sur `/api/*`, à l'edge)
 - ⬜ Sources `search`/`scrape` (Cursor, Codex, Free-Work, APEC), France Travail
   (chiffres marché FR)
-- ⬜ Rate-limiting, rétro-remplissage EN des fiches antérieures
+- ⬜ Rétro-remplissage EN des fiches antérieures
 
 ## Licence
 
