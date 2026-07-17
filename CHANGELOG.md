@@ -102,6 +102,10 @@
   autre site »._
 - **Traduire aussi les posts** (fiches Atelier bilingues). — _Raison : le toggle
   FR/EN ne traduisait pas les posts._
+- **Traduire aussi les titres/résumés de « La sélection »** (items dev, FR + EN) :
+  décision de livrer la traduction des items (feature restée en WIP local). —
+  _Raison : le toggle FR/EN ne touchait pas les titres d'articles, qui restaient en
+  langue source._
 - **Mode clair/sombre.** — _Raison non précisée (« détail esthétique »)._
 - **Corriger les affirmations invérifiables** de l'encadré « le bruit qu'on a
   coupé ». — _Raison : exactitude (j'ai questionné la véracité de l'affirmation)._
@@ -137,10 +141,20 @@
 - **Purger automatiquement les sujets datant de plus d'une semaine** (rétention
   7 jours), au lieu de la conservation infinie actuelle. — _Raison : éviter
   l'accumulation illimitée en base ; la veille ne garde que le frais._
-- _État : code écrit_ (`src/purge.ts`, purge par `cree_le`, câblée dans la passe
-  quotidienne, fenêtre `RETENTION_DAYS` = 7 j). Pas encore déployée — en attente
-  de trancher une feature « traduction des items » restée en WIP local qui bloque
-  le déploiement. Impact prod à ce jour : 0 (aucun item n'a encore 7 jours).
+- _État : livrée._ `src/purge.ts` (purge par `cree_le`, fenêtre `RETENTION_DAYS`
+  = 7 j) câblée dans la passe quotidienne, déployée. Impact prod à ce jour : 0
+  (aucun item n'a encore 7 jours ; mordra quand ils vieilliront).
+
+### 1.12 Vue « La sélection » — regroupement par catégorie
+
+- **Regrouper les articles de « La sélection » en sections repliables par
+  catégorie** (au lieu du tri à plat par rang de source), tri par date dans chaque
+  section, les chips de catégories existantes servant d'ancres/filtre. Règle : une
+  **catégorie primaire** par item (pas de doublon entre sections), bucket
+  « Autres » pour les non catégorisés. — _Raison : confort de lecture / scan
+  d'ensemble ; le tri par source ne regroupe le sujet que par accident._
+- _État : décidé, à implémenter (côté `public/app.js` surtout ; le back renvoie
+  déjà `items.categories`)._
 
 ---
 
@@ -166,6 +180,13 @@ francetravail.io` ne résout pas (NXDOMAIN).
   de l'indicateur PERSP_2 ; **territoire national NAT/FR par défaut**.
 - **Génération FR + EN dans le même appel Haiku** (le principe bilingue vient de
   moi ; le « comment » est de l'assistant).
+- **Traduction des items découplée de la passe quotidienne** : la limite ~50
+  sous-requêtes/invocation Worker tuait la traduction (jamais atteinte après le
+  curate). Sortie sur son propre cron (09:00 UTC) + endpoint `POST /api/translate`,
+  plafond 45/invocation.
+- **Purge basée sur `cree_le`** (et non `date_pub`) — format uniforme, fiable en
+  SQL contrairement aux dates de feeds hétérogènes ; suppression FK-safe
+  (drafts/verdicts avant items).
 - **Bascule rate-limit** binding natif Workers → règle WAF (le binding natif
   était sans effet) — j'ai créé la règle, le diagnostic et la bascule sont de
   l'assistant.
