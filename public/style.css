@@ -275,6 +275,26 @@ tr.off{ opacity:.45; }
 .foot-links .foot-tab:hover{ color:var(--navy); text-decoration:underline; text-underline-offset:3px; }
 .foot-links .foot-tab.active{ color:var(--navy); text-decoration:underline; text-underline-offset:3px; }
 
+/* Sections par catégorie — vue « La sélection » regroupée */
+.cat-group{ border-top:2px solid var(--navy); }
+.cat-group > summary{
+  cursor:pointer; list-style:none; user-select:none;
+  display:flex; align-items:baseline; gap:.6rem;
+  padding:.9rem 0 .35rem;
+  font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size:12px; text-transform:uppercase; letter-spacing:.16em; color:var(--ink);
+}
+.cat-group > summary::-webkit-details-marker{ display:none; }
+.cat-group > summary::before{
+  content:"–"; display:inline-block; width:.9em; color:var(--navy); font-size:15px; line-height:1;
+}
+.cat-group:not([open]) > summary::before{ content:"+"; }
+.cat-group > summary:hover{ color:var(--navy); }
+.cat-group .cat-count{ margin-left:auto; font-size:10px; letter-spacing:.1em; color:var(--muted); }
+.cat-group .entry:first-of-type{ border-top:0; }
+/* .entry{display:grid} l'emporterait sur le masquage UA d'un <details> fermé */
+.cat-group:not([open]) > .entry{ display:none; }
+
 @media (max-width:640px){
   .wordmark{ font-size:52px; }
   .entry{ grid-template-columns:1fr; gap:.5rem; }

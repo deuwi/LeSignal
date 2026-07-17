@@ -28,7 +28,7 @@ const I18N = {
     aside_text: "Ce que le pré-filtre écarte : « l'IA va remplacer les devs », les formations à six chiffres, la peur artificielle, la dernière sortie produit qui n'a rien à voir avec le code que tu écris, la politique.",
     read_more: "lire ↓", read_less: "replier ↑",
     f_retenu: "retenus", f_rejete: "écartés", f_all: "tout",
-    chip_all: "Tout", chip_fav: "Favoris",
+    chip_all: "Tout", chip_fav: "Favoris", cat_other: "Autres",
     empty_dev: "Aucune entrée pour ce filtre.",
     empty_deuwi: "Aucune proposition. La passe quotidienne alimente l'atelier et écarte ce qui est déjà sur Notion.",
     proposals: "propositions", draft_hint: "copie la ligne, colle dans Notion — ce qui y est déjà est écarté.",
@@ -56,7 +56,7 @@ const I18N = {
     aside_text: "What the pre-filter drops: “AI will replace developers”, six-figure bootcamps, artificial fear, the latest product launch that has nothing to do with the code you write, politics.",
     read_more: "read ↓", read_less: "collapse ↑",
     f_retenu: "kept", f_rejete: "dropped", f_all: "all",
-    chip_all: "All", chip_fav: "Favourites",
+    chip_all: "All", chip_fav: "Favourites", cat_other: "Other",
     empty_dev: "No entry for this filter.",
     empty_deuwi: "No proposal. The daily pass feeds the workshop and drops what's already in Notion.",
     proposals: "proposals", draft_hint: "copy the row, paste into Notion — anything already there is dropped.",
@@ -117,6 +117,55 @@ function catSurtitle(catStr) {
   return cats.length ? cats.join(" · ") : "";
 }
 
+// Carte d'un item de la sélection.
+function entryHtml(it) {
+  const cat = catSurtitle(it.categories);
+  const rejected = it.statut === "rejete";
+  const titre = (lang === "en" ? it.titre_en : it.titre_fr) || it.titre;
+  const resume = (lang === "en" ? it.resume_en : it.resume_fr) ?? it.resume;
+  return `
+    <article class="entry ${rejected ? "entry--rejete" : ""}">
+      <div class="entry-side">
+        <time>${esc(fmtDate(it.date_pub))}</time>
+        <span class="src">${esc(it.source)}</span>
+        <button class="fav ${it.favori ? "on" : ""}" data-id="${it.id}" aria-label="favori">★</button>
+        ${rejected ? `<span class="rej">${esc(t("rej"))}${it.raison_rejet ? " · " + esc(it.raison_rejet) : ""}</span>` : ""}
+      </div>
+      <div class="entry-main">
+        ${cat ? `<div class="kicker-cat">${esc(cat)}</div>` : ""}
+        <h3><a href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener">${esc(titre)}</a></h3>
+        ${resume ? (resume.length > 180
+          ? `<p class="sum clamp">${esc(resume)}</p><button type="button" class="more">${esc(t("read_more"))}</button>`
+          : `<p class="sum">${esc(resume)}</p>`) : ""}
+        ${refLinks(it.links)}
+      </div>
+    </article>`;
+}
+
+// Regroupe par catégorie PRIMAIRE (1re du tableau), sections repliables triées
+// date décroissante. Ordre des sections = ordre config, puis « Autres » en dernier.
+function groupHtml(items) {
+  const OTHER = " other";
+  const buckets = new Map();
+  for (const it of items) {
+    const primary = parseJson(it.categories, [])[0] || OTHER;
+    (buckets.get(primary) || buckets.set(primary, []).get(primary)).push(it);
+  }
+  const names = [];
+  for (const c of cfg.categories) if (buckets.has(c.name)) names.push(c.name);
+  for (const n of buckets.keys()) if (n !== OTHER && !names.includes(n)) names.push(n);
+  if (buckets.has(OTHER)) names.push(OTHER);
+
+  return names.map(n => {
+    const list = buckets.get(n).slice().sort((a, b) => String(b.date_pub || "").localeCompare(String(a.date_pub || "")));
+    const label = n === OTHER ? t("cat_other") : n;
+    return `<details class="cat-group" open>
+      <summary><span class="cat-name">${esc(label)}</span><span class="cat-count">${list.length}</span></summary>
+      ${list.map(entryHtml).join("")}
+    </details>`;
+  }).join("");
+}
+
 // ---------- La sélection (flux dev) ----------
 async function renderItems() {
   await ensureConfig();
@@ -140,29 +189,9 @@ async function renderItems() {
 
   if (!items.length) { view.innerHTML = intro + head + `<div class="empty">${esc(t("empty_dev"))}</div>`; wireDev(); return; }
 
-  view.innerHTML = intro + head + items.map(it => {
-    const cat = catSurtitle(it.categories);
-    const rejected = it.statut === "rejete";
-    const titre = (lang === "en" ? it.titre_en : it.titre_fr) || it.titre;
-    const resume = (lang === "en" ? it.resume_en : it.resume_fr) ?? it.resume;
-    return `
-    <article class="entry ${rejected ? "entry--rejete" : ""}">
-      <div class="entry-side">
-        <time>${esc(fmtDate(it.date_pub))}</time>
-        <span class="src">${esc(it.source)}</span>
-        <button class="fav ${it.favori ? "on" : ""}" data-id="${it.id}" aria-label="favori">★</button>
-        ${rejected ? `<span class="rej">${esc(t("rej"))}${it.raison_rejet ? " · " + esc(it.raison_rejet) : ""}</span>` : ""}
-      </div>
-      <div class="entry-main">
-        ${cat ? `<div class="kicker-cat">${esc(cat)}</div>` : ""}
-        <h3><a href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener">${esc(titre)}</a></h3>
-        ${resume ? (resume.length > 180
-          ? `<p class="sum clamp">${esc(resume)}</p><button type="button" class="more">${esc(t("read_more"))}</button>`
-          : `<p class="sum">${esc(resume)}</p>`) : ""}
-        ${refLinks(it.links)}
-      </div>
-    </article>`;
-  }).join("");
+  // Vue « Tout » = regroupée par catégorie ; un filtre actif (catégorie/favori) = liste plate.
+  const grouped = !dev.categorie && !dev.favori;
+  view.innerHTML = intro + head + (grouped ? groupHtml(items) : items.map(entryHtml).join(""));
   wireDev();
   view.querySelectorAll(".more").forEach(b => b.onclick = () => {
     const sum = b.previousElementSibling;
