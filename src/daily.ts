@@ -2,7 +2,6 @@
 import type { Env } from "./types";
 import { runIngest } from "./ingest";
 import { runCurate } from "./curate";
-import { runTranslate } from "./curate/translate";
 import { listNotionUrls, markDraftsInNotion } from "./notion/client";
 import { purgeOld } from "./purge";
 import { stamp } from "./state";
@@ -27,8 +26,7 @@ export async function runDaily(env: Env) {
   }
 
   const curate = await runCurate(env, 40, notion);
-  const translate = await runTranslate(env, 60);
   const masquees = await markDraftsInNotion(env, notion);
 
-  return { purge, ingest, curate, translate, notion_urls: notion.size, notion_error: notionError, masquees };
+  return { purge, ingest, curate, notion_urls: notion.size, notion_error: notionError, masquees };
 }

@@ -184,13 +184,35 @@ app.post("/api/backfill-en", async (c) => {
   return c.json(report);
 });
 
+// Traduction des items de la sélection (flux dev) — action LLM, protégée.
+// Découplée de la passe quotidienne (trop lourde en une invocation) : tourne sur
+// son propre cron et à la demande ici. ?limit=<=80.
+app.post("/api/translate", async (c) => {
+  const unauth = await requireAdmin(c);
+  if (unauth) return unauth;
+  const { runTranslate } = await import("./curate/translate");
+  // Plafond sous la limite de sous-requêtes par invocation Worker (~50).
+  const limit = Math.min(Number(c.req.query("limit") ?? "45"), 45);
+  const report = await runTranslate(c.env, limit);
+  return c.json(report);
+});
+
 // Static assets (dashboard) en fallback
 app.get("*", (c) => c.env.ASSETS.fetch(c.req.raw));
 
 export default {
   fetch: app.fetch,
-  // Cron quotidien — voir wrangler.jsonc triggers
-  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(runDaily(env).then((r) => console.log("daily:", JSON.stringify(r))));
+  // Deux crons (voir wrangler.jsonc) : 07:00 = passe complète, 09:00 = traduction
+  // des items (découplée car la passe complète sature déjà l'invocation).
+  async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext) {
+    if (event.cron === "0 9 * * *") {
+      ctx.waitUntil(
+        import("./curate/translate").then(({ runTranslate }) =>
+          runTranslate(env, 45).then((r) => console.log("translate:", JSON.stringify(r)))
+        )
+      );
+    } else {
+      ctx.waitUntil(runDaily(env).then((r) => console.log("daily:", JSON.stringify(r))));
+    }
   },
 };

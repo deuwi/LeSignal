@@ -21,9 +21,10 @@
       "migrations_dir": "migrations"
     }
   ],
-  // Passe quotidienne — 07:00 UTC
+  // 07:00 UTC = passe complète (purge/ingest/curate) ; 09:00 UTC = traduction
+  // des items de la sélection (découplée pour ne pas saturer l'invocation).
   "triggers": {
-    "crons": ["0 7 * * *"]
+    "crons": ["0 7 * * *", "0 9 * * *"]
   },
   "vars": {
     "FRESHNESS_DAYS": "7",
