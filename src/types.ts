@@ -2,6 +2,7 @@ export interface Env {
   DB: D1Database;
   ASSETS: Fetcher;
   FRESHNESS_DAYS: string;
+  RETENTION_DAYS?: string; // purge des items plus vieux (défaut 7j)
   // secrets (phases suivantes) — absents en Phase 1
   ANTHROPIC_API_KEY?: string;
   NOTION_TOKEN?: string;

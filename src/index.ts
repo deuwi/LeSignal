@@ -29,7 +29,8 @@ app.get("/api/items", async (c) => {
   const clause = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
   const { results } = await c.env.DB.prepare(
-    `SELECT i.id, i.url, i.titre, i.resume, i.date_pub, i.flux, i.statut, i.raison_rejet,
+    `SELECT i.id, i.url, i.titre, i.resume, i.titre_fr, i.resume_fr, i.titre_en, i.resume_en,
+            i.date_pub, i.flux, i.statut, i.raison_rejet,
             i.lu, i.favori, i.categories, i.links, s.nom AS source, s.rank
      FROM items i JOIN sources s ON s.id=i.source_id
      ${clause}

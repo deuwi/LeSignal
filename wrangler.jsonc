@@ -26,6 +26,7 @@
     "crons": ["0 7 * * *"]
   },
   "vars": {
-    "FRESHNESS_DAYS": "7"
+    "FRESHNESS_DAYS": "7",
+    "RETENTION_DAYS": "7"
   }
 }

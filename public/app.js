@@ -143,6 +143,8 @@ async function renderItems() {
   view.innerHTML = intro + head + items.map(it => {
     const cat = catSurtitle(it.categories);
     const rejected = it.statut === "rejete";
+    const titre = (lang === "en" ? it.titre_en : it.titre_fr) || it.titre;
+    const resume = (lang === "en" ? it.resume_en : it.resume_fr) ?? it.resume;
     return `
     <article class="entry ${rejected ? "entry--rejete" : ""}">
       <div class="entry-side">
@@ -153,10 +155,10 @@ async function renderItems() {
       </div>
       <div class="entry-main">
         ${cat ? `<div class="kicker-cat">${esc(cat)}</div>` : ""}
-        <h3><a href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener">${esc(it.titre)}</a></h3>
-        ${it.resume ? (it.resume.length > 180
-          ? `<p class="sum clamp">${esc(it.resume)}</p><button type="button" class="more">${esc(t("read_more"))}</button>`
-          : `<p class="sum">${esc(it.resume)}</p>`) : ""}
+        <h3><a href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener">${esc(titre)}</a></h3>
+        ${resume ? (resume.length > 180
+          ? `<p class="sum clamp">${esc(resume)}</p><button type="button" class="more">${esc(t("read_more"))}</button>`
+          : `<p class="sum">${esc(resume)}</p>`) : ""}
         ${refLinks(it.links)}
       </div>
     </article>`;

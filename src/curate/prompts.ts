@@ -53,3 +53,18 @@ export function draftUser(
     `CONTENU:\n${contenu}`
   );
 }
+
+// Traduction bilingue d'un item de la sélection (flux dev). La source peut être
+// en FR (Free-Work, APEC) ou EN (arXiv, HN): on génère les deux versions.
+export const TRANSLATE_SYSTEM =
+  `Tu traduis un titre et un résumé d'article tech (veille développeur).\n` +
+  `Fournis une version française naturelle ET une version anglaise naturelle, ` +
+  `quelle que soit la langue source. Garde les termes techniques et noms propres tels quels ` +
+  `(ex: LLM, framework, arXiv). Fidèle, concis, sans hype ni ajout.\n\n` +
+  `Réponds UNIQUEMENT un JSON:\n` +
+  `{"titre_fr":string,"resume_fr":string,"titre_en":string,"resume_en":string}\n` +
+  `Si le résumé source est vide, mets resume_fr et resume_en à "".`;
+
+export function translateUser(titre: string, resume: string | null): string {
+  return `TITRE: ${titre}\n\nRÉSUMÉ:\n${resume ?? ""}`;
+}
