@@ -11,6 +11,9 @@ export interface Env {
   BRAVE_API_KEY?: string; // sources `search` (Brave Search API)
   FT_CLIENT_ID?: string;
   FT_CLIENT_SECRET?: string;
+  // Base Notion dédiée « Signaux Trends ». Réutilise NOTION_TOKEN (intégration
+  // existante, partagée aussi avec cette base) ; seul l'ID de base diffère.
+  NOTION_BANC_DB_ID?: string;
 }
 
 export type Flux = "dev" | "deuwi" | "both";

@@ -96,6 +96,56 @@ export async function runIngest(env: Env, onlySourceId?: number): Promise<RunRep
   return report;
 }
 
+// Ingère une liste d'items bruts déjà récupérés (ex. signaux Trends poussés
+// via POST /api/ingest-trends) dans le pipeline : même hash/pré-filtre/
+// catégorisation/insert batch que runIngest, sous un source_id donné.
+export async function ingestItems(
+  env: Env,
+  sourceId: number,
+  flux: Flux,
+  raw: RawItem[]
+): Promise<{ inserted: number; duplicates: number; retenu: number; rejete: number }> {
+  const report = { inserted: 0, duplicates: 0, retenu: 0, rejete: 0 };
+  if (!raw.length) return report;
+  const now = Date.now();
+  const cfg = compile(await loadConfig(env));
+  const insert = env.DB.prepare(
+    `INSERT INTO items (source_id, url, titre, resume, date_pub, hash, flux, statut, raison_rejet, categories, links)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(hash) DO NOTHING`
+  );
+  const stmts: D1PreparedStatement[] = [];
+  const statuts: string[] = [];
+  for (const item of raw) {
+    const hash = await itemHash(item.url, item.titre);
+    const rawResume = item.resume ?? "";
+    const verdict = filterItem(item.titre, rawResume, item.date_pub, flux, cfg, now);
+    const cats = categorize(item.titre, rawResume, cfg);
+    const links = extractLinks(rawResume, item.url);
+    const resumeClean = stripTags(rawResume).slice(0, 600) || null;
+    stmts.push(insert.bind(
+      sourceId, item.url, item.titre, resumeClean, item.date_pub ?? null,
+      hash, flux, verdict.statut, verdict.raison ?? null,
+      cats.length ? JSON.stringify(cats) : null,
+      links.length ? JSON.stringify(links) : null
+    ));
+    statuts.push(verdict.statut);
+  }
+  const CHUNK = 50;
+  for (let i = 0; i < stmts.length; i += CHUNK) {
+    const res = await env.DB.batch(stmts.slice(i, i + CHUNK));
+    res.forEach((r, j) => {
+      if (r.meta.changes > 0) {
+        report.inserted++;
+        statuts[i + j] === "retenu" ? report.retenu++ : report.rejete++;
+      } else {
+        report.duplicates++;
+      }
+    });
+  }
+  return report;
+}
+
 async function fetchSource(src: Source, env: Env): Promise<RawItem[]> {
   switch (src.type) {
     case "rss":

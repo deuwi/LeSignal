@@ -28,6 +28,9 @@
   },
   "vars": {
     "FRESHNESS_DAYS": "7",
-    "RETENTION_DAYS": "7"
+    "RETENTION_DAYS": "7",
+    // ID de la base Notion « 🔎 Signaux Trends » (id public, pas un secret).
+    // Le token de l'intégration reste un secret : NOTION_BANC_TOKEN.
+    "NOTION_BANC_DB_ID": "48f88fa4c5da4ac0a4f8d979c8a7d8fb"
   }
 }

@@ -6,6 +6,9 @@ import { loadConfig, saveConfig, type Config } from "./config";
 import { requireAdmin } from "./auth";
 import { createNotionPage } from "./notion/write";
 import { runBackfillEn } from "./curate/backfill";
+import { ingestItems } from "./ingest";
+import { normalizeSignal, trendToRawItem, type TrendSignal } from "./ingest/trends";
+import { writeTrendSignals } from "./notion/trends-banc";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -195,6 +198,38 @@ app.post("/api/translate", async (c) => {
   const limit = Math.min(Number(c.req.query("limit") ?? "45"), 45);
   const report = await runTranslate(c.env, limit);
   return c.json(report);
+});
+
+// Réception des signaux Google Trends poussés depuis l'extérieur (trend_watch.py
+// tourne sur une IP résidentielle : l'API Trends est CAPTCHA-wallée sur IP
+// datacenter). Admin-gated. Ingère dans le pipeline (source_id 26, flux deuwi)
+// puis écrit les BREAKOUTS dans la base Notion « Signaux Trends » (à trier),
+// fail-soft. Body: { "signals": [{seed,geo,query,value,breakout}], "date"?: "YYYY-MM-DD" }
+const TRENDS_SOURCE_ID = 26;
+app.post("/api/ingest-trends", async (c) => {
+  const unauth = await requireAdmin(c);
+  if (unauth) return unauth;
+  const body = await c.req.json<{ signals?: unknown[]; date?: string }>().catch(() => ({} as { signals?: unknown[]; date?: string }));
+  const signals = (body.signals ?? [])
+    .map(normalizeSignal)
+    .filter((s): s is TrendSignal => s !== null);
+  if (!signals.length) return c.json({ received: 0, ingest: null, notion: [] });
+
+  const nowIso = new Date().toISOString();
+  const dateOnly = (typeof body.date === "string" && /^\d{4}-\d{2}-\d{2}/.test(body.date) ? body.date : nowIso).slice(0, 10);
+
+  // 1) pipeline : tous les signaux (rising + breakout) → items dedup/pré-filtre.
+  const items = signals.map((s) => trendToRawItem(s, nowIso));
+  const ingest = await ingestItems(c.env, TRENDS_SOURCE_ID, "deuwi", items);
+
+  // 2) Notion « à trier » : breakouts seulement (les hausses simples restent dans
+  //    l'app ; le breakout est le signal fort à trier à la main). Fail-soft.
+  const breakouts = signals.filter((s) => s.breakout);
+  const notion = await writeTrendSignals(c.env, breakouts, dateOnly);
+  const notionErr = notion.filter((n) => n.action === "error");
+  if (notionErr.length) console.error("ingest-trends notion:", JSON.stringify(notionErr));
+
+  return c.json({ received: signals.length, ingest, notion_breakouts: breakouts.length, notion });
 });
 
 // Static assets (dashboard) en fallback
