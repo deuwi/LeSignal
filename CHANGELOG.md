@@ -156,6 +156,23 @@
 - _État : décidé, à implémenter (côté `public/app.js` surtout ; le back renvoie
   déjà `items.categories`)._
 
+### 2026-07-18 — Source Google Trends (rising/breakout) + écriture Notion automatique
+
+- **Ajout Google Trends `related_queries` (rising + breakout)** au batch quotidien :
+  même pipeline que les autres sources (dédup → pré-filtre heuristique → curation
+  Haiku, même format de fiche). Rotation par run (MAX_KEYWORDS_PER_RUN + état de
+  rotation) pour éviter le 429 Google — jamais toute la watchlist en un seul run.
+  — Raison : capter les signaux de recherche émergents (breakout) dev/IA.
+- **Écriture automatique dans Notion (base « Banc d'essai ») en fin de batch**, sans
+  supervision : API REST Notion, statut par défaut « à trier », anti-doublon (update
+  si entrée équivalente pour la date/le signal), fail-soft (échec Notion loggé, le
+  run continue). Exception assumée au principe read-only (§1.5).
+
+Explicitement exclu :
+
+- **« Trending Now »** (scraping trends.google.com/trending) : pas d'API JSON stable,
+  dépend du texte affiché, échoue déjà régulièrement → n'entre pas en prod.
+
 ---
 
 ## 2. Exécution — choix d'implémentation de l'assistant
