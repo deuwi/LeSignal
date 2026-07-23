@@ -72,6 +72,11 @@ Ajout benchmarks : arXiv cs.SE (agents/codegen déjà couvert par le feed).
 | France Travail — tension recrutement | api | API Marché du travail, indicateur PERSP_2 niveau 1–5 par ROME (clé) | ! | 3 |
 | APEC études/marché | search | (voir §2 — requête Brave) | ✗ | 3 |
 
+### 5. Signaux de recherche émergents (Google Trends)
+| Source | Type | URL | Statut | rank |
+|---|---|---|---|---|
+| Google Trends — `related_queries` (rising/breakout) | push | poussé via `POST /api/ingest-trends` (fetch **hors** Worker) | ! | 1 |
+
 ---
 
 ## Détails APIs (§API)
@@ -103,6 +108,25 @@ Réponse JSON → map vers `items` (titre, url, created_at, points).
     `PERSP_2`, synthèse `PERSPECTIVE`, niveau 1–5, France entière).
 - Maille : code ROME dev, éditable en config (défaut `M1805`, `M1802`, `M1810`,
   `M1806`), libellés récupérés dynamiquement. Chiffres sourcés (chapitre 2 marché).
+
+### Google Trends — `related_queries` (rising/breakout) → push + Google Sheet
+Le fetch Trends **n'est pas fait par le Worker** : depuis une IP datacenter Cloudflare,
+l'endpoint interne renvoie le mur `/sorry/` (CAPTCHA anti-bot). Un script externe
+(`trend_watch.py`, IP résidentielle) récupère `related_queries` et **pousse** les signaux :
+```
+POST /api/ingest-trends   (admin-gated, en-tête X-Admin-Token)
+body: { "signals": [{seed,geo,query,value,breakout}], "date"?: "YYYY-MM-DD" }
+```
+- **Ingestion** : tous les signaux (rising + breakout) passent le pipeline standard
+  (dédup `items.hash` → pré-filtre → catégorisation → insert), sous `source_id=26`, `flux=deuwi`.
+- **Sortie Google Sheet** (breakouts seulement) : écriture auto « à trier » via l'API REST
+  Sheets. Auth service account — JWT RS256 signé **Web Crypto** (`crypto.subtle`, Workers
+  n'a pas `node:crypto`), token OAuth, `values/A:I:append` (USER_ENTERED / INSERT_ROWS).
+  Secrets `GOOGLE_SA_KEY` (JSON du SA) + `SHEETS_ID` ; partager le Sheet en éditeur avec
+  le `client_email` du SA. Dédup avant écriture : rejet si `(titre,type)` existe, ou si le
+  `titre` seul existe (anti-doublon rising/breakout d'un même terme). Sans secrets, la sortie
+  Sheet est ignorée (l'ingestion, elle, continue). Remplace l'ancienne sortie Notion.
+- **Exclu** : « Trending Now » (scraping `trends.google.com/trending`, fragile) — hors prod.
 
 ### Sources `✗` (pas de feed) → recherche Brave
 Cursor changelog, OpenAI Codex, Free-Work marché, APEC études.

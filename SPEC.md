@@ -320,8 +320,9 @@ pas affecté).
 - **Haiku** : seulement sur shortlist post-filtre, hors sujets déjà sur Notion (exclus avant scoring). Une passe quotidienne sur ~20-40 items × (score + draft) ≈ quelques centimes.
 - **D1 / Workers / Cron / Assets** : free tier Cloudflare largement suffisant à ce volume.
 - Secrets (`wrangler secret put`) : `ANTHROPIC_API_KEY` (requis), `NOTION_TOKEN` +
-  `NOTION_DB_ID`, `ADMIN_TOKEN`, `BRAVE_API_KEY`, `FT_CLIENT_ID` + `FT_CLIENT_SECRET`
-  (tous optionnels sauf Anthropic).
+  `NOTION_DB_ID`, `ADMIN_TOKEN`, `BRAVE_API_KEY`, `FT_CLIENT_ID` + `FT_CLIENT_SECRET`,
+  `GOOGLE_SA_KEY` + `SHEETS_ID` (sortie Sheet des signaux Trends) — tous optionnels
+  sauf Anthropic.
 
 Levier coût principal : la qualité du pré-filtre étage 2. Plus il coupe juste, moins Haiku tourne.
 
@@ -355,12 +356,19 @@ Fonctionnalités arrivées après le cadrage initial, toutes déployées :
 - **Bilingue FR/EN** — Haiku génère `fait_en`/`angle_en` à la curation ; chrome de l'UI
   traduit ; `POST /api/backfill-en` pour l'historique.
 - **Mode clair/sombre** — préférence système + choix mémorisé.
+- **Google Trends** (source `deuwi`, signaux `related_queries` rising/breakout) — fetch
+  **hors Worker** (IP datacenter Cloudflare bloquée par le mur `/sorry/`), signaux poussés
+  via `POST /api/ingest-trends` (admin-gated) puis passés au pipeline standard. Les
+  **breakouts** sont écrits dans un **Google Sheet** (« à trier ») : JWT RS256 signé Web
+  Crypto → token OAuth service account → `values/A:I:append` ; dédup `(titre,type)` + titre
+  seul avant écriture ; secrets `GOOGLE_SA_KEY` + `SHEETS_ID`. Remplace l'ancienne sortie
+  Notion (base « Signaux Trends », abandonnée). « Trending Now » exclu (scraping fragile).
 
 ### Sécurité (app publique, repo public)
 
 - **Séparation lecture/écriture** : lectures + dashboard en `GET` public ; toute
   écriture/dépense (`daily`, `config` PUT/DELETE, `flag`, `drafts/:id/notion`,
-  `backfill-en`) protégée par `ADMIN_TOKEN` (en-tête `X-Admin-Token`, comparaison à
+  `backfill-en`, `ingest-trends`) protégée par `ADMIN_TOKEN` (en-tête `X-Admin-Token`, comparaison à
   **temps constant** SHA-256, cf. `src/auth.ts`).
 - **Rate-limiting** : règle WAF Cloudflare (edge, avant le Worker) sur `/api/*`.
 - **Défenses** : SQL paramétré ; `processEntities:false` sur le parseur XML ; bornes de

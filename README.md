@@ -78,8 +78,10 @@ Secrets locaux dans `.dev.vars` (gitignoré, voir
 [.dev.vars.example](.dev.vars.example)) : `ANTHROPIC_API_KEY` (curation),
 `NOTION_TOKEN` + `NOTION_DB_ID` (Notion), `ADMIN_TOKEN` (protège les
 écritures), `BRAVE_API_KEY` (sources recherche), `FT_CLIENT_ID` +
-`FT_CLIENT_SECRET` (France Travail). Tous optionnels sauf `ANTHROPIC` : sans
-Brave ou France Travail, ces sources sont simplement ignorées.
+`FT_CLIENT_SECRET` (France Travail), `GOOGLE_SA_KEY` + `SHEETS_ID` (sortie
+des signaux Google Trends vers Google Sheet, voir §Sources). Tous optionnels
+sauf `ANTHROPIC` : sans Brave, France Travail ou Google Sheet, ces
+sources/sorties sont simplement ignorées.
 
 Déclencher une passe en dev (l'endpoint est protégé — en-tête
 `X-Admin-Token`) :
@@ -101,6 +103,8 @@ npx wrangler secret put ADMIN_TOKEN
 npx wrangler secret put BRAVE_API_KEY       # optionnel — sources recherche
 npx wrangler secret put FT_CLIENT_ID        # optionnel — France Travail
 npx wrangler secret put FT_CLIENT_SECRET
+npx wrangler secret put GOOGLE_SA_KEY       # optionnel — sortie Sheet des signaux Trends
+npx wrangler secret put SHEETS_ID
 ```
 
 Cron quotidien (07:00 UTC) et custom domain `signal.deuwi.xyz` configurés
@@ -124,6 +128,7 @@ L'app est déployée **publiquement**. La séparation est simple :
 | Route                    | Méthode      | Auth | Effet protégé                                             |
 | ------------------------ | ------------ | ---- | --------------------------------------------------------- |
 | `/api/drafts/:id/notion` | POST         | ✅   | crée une page Notion                                      |
+| `/api/ingest-trends`     | POST         | ✅   | ingère les signaux Google Trends poussés + écrit au Sheet |
 | `/api/config`            | PUT / DELETE | ✅   | modifie/réinitialise les filtres (regex → ReDoS possible) |
 | `/api/daily`             | POST         | ✅   | déclenche ingestion + curation Haiku (coût $)             |
 | `/api/items/:id/flag`    | POST         | ✅   | écrit en base (lu/favori)                                 |
@@ -167,6 +172,9 @@ Configurée hors dépôt (dashboard Cloudflare → Security rules → Rate limit
 - ✅ Fiches **bilingues FR/EN** (générées à la curation)
 - ✅ Notion : exclusion (lecture) + création de page (écriture protégée) +
   copie CSV
+- ✅ Google Trends : signaux `related_queries` (rising/breakout) poussés via
+  `POST /api/ingest-trends` (fetch hors Worker), breakouts écrits au Google
+  Sheet (à trier)
 - ✅ Passe quotidienne (cron) + garde-fou 1×/20h
 - ✅ Config éditable (Réglages), liens de référence, résumé dépliable
 - ✅ Interface « Le Signal » (bilingue, mode clair/sombre) déployée sur
