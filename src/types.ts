@@ -13,7 +13,11 @@ export interface Env {
   FT_CLIENT_SECRET?: string;
   // Base Notion dédiée « Signaux Trends ». Réutilise NOTION_TOKEN (intégration
   // existante, partagée aussi avec cette base) ; seul l'ID de base diffère.
+  // Abandonnée : plus appelée (remplacée par la sortie Google Sheet ci-dessous).
   NOTION_BANC_DB_ID?: string;
+  // Sortie des signaux Trends vers Google Sheet (remplace Notion).
+  GOOGLE_SA_KEY?: string; // JSON du service account (secret)
+  SHEETS_ID?: string;     // id du spreadsheet cible (secret)
 }
 
 export type Flux = "dev" | "deuwi" | "both";

@@ -8,7 +8,7 @@ import { createNotionPage } from "./notion/write";
 import { runBackfillEn } from "./curate/backfill";
 import { ingestItems } from "./ingest";
 import { normalizeSignal, trendToRawItem, type TrendSignal } from "./ingest/trends";
-import { writeTrendSignals } from "./notion/trends-banc";
+import { writeTrendSignalsToSheet } from "./sheets/trends-sheet";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -203,7 +203,7 @@ app.post("/api/translate", async (c) => {
 // Réception des signaux Google Trends poussés depuis l'extérieur (trend_watch.py
 // tourne sur une IP résidentielle : l'API Trends est CAPTCHA-wallée sur IP
 // datacenter). Admin-gated. Ingère dans le pipeline (source_id 26, flux deuwi)
-// puis écrit les BREAKOUTS dans la base Notion « Signaux Trends » (à trier),
+// puis écrit les BREAKOUTS dans le Google Sheet « Signaux Trends » (à trier),
 // fail-soft. Body: { "signals": [{seed,geo,query,value,breakout}], "date"?: "YYYY-MM-DD" }
 const TRENDS_SOURCE_ID = 26;
 app.post("/api/ingest-trends", async (c) => {
@@ -222,14 +222,15 @@ app.post("/api/ingest-trends", async (c) => {
   const items = signals.map((s) => trendToRawItem(s, nowIso));
   const ingest = await ingestItems(c.env, TRENDS_SOURCE_ID, "deuwi", items);
 
-  // 2) Notion « à trier » : breakouts seulement (les hausses simples restent dans
-  //    l'app ; le breakout est le signal fort à trier à la main). Fail-soft.
+  // 2) Google Sheet « à trier » : breakouts seulement (les hausses simples restent
+  //    dans l'app ; le breakout est le signal fort à trier à la main). Dédup avant
+  //    append, fail-soft.
   const breakouts = signals.filter((s) => s.breakout);
-  const notion = await writeTrendSignals(c.env, breakouts, dateOnly);
-  const notionErr = notion.filter((n) => n.action === "error");
-  if (notionErr.length) console.error("ingest-trends notion:", JSON.stringify(notionErr));
+  const sheet = await writeTrendSignalsToSheet(c.env, breakouts, dateOnly);
+  const sheetErr = sheet.filter((r) => r.action === "error");
+  if (sheetErr.length) console.error("ingest-trends sheet:", JSON.stringify(sheetErr));
 
-  return c.json({ received: signals.length, ingest, notion_breakouts: breakouts.length, notion });
+  return c.json({ received: signals.length, ingest, sheet_breakouts: breakouts.length, sheet });
 });
 
 // Static assets (dashboard) en fallback

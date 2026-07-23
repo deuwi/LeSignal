@@ -173,6 +173,33 @@ Explicitement exclu :
 - **« Trending Now »** (scraping trends.google.com/trending) : pas d'API JSON stable,
   dépend du texte affiché, échoue déjà régulièrement → n'entre pas en prod.
 
+### 2026-07-23 — Sortie des signaux Trends vers Google Sheet (abandon Notion)
+
+- **Destination des signaux Google Trends = Google Sheet, plus Notion.** La base
+  Notion « Signaux Trends » est abandonnée (archivée à la main). Le code Notion
+  (`src/notion/trends-banc.ts`) reste en place mais **n'est plus appelé** — aucune
+  suppression. — _Raison : non précisée._
+- **Périmètre gelé** : seul `related_queries` (rising + breakout) reste porté ;
+  « Trending Now » toujours hors prod. Comme avec Notion, seuls les **breakouts**
+  partent au Sheet (les hausses simples restent dans l'app).
+
+Choix d'implémentation (assistant) :
+
+- **Récupération Trends impossible dans le Worker** (re-confirmé) : depuis une IP
+  datacenter Cloudflare, l'endpoint interne renvoie le mur `/sorry/` (CAPTCHA). On
+  garde le mécanisme de push existant (`POST /api/ingest-trends` depuis une IP
+  résidentielle) ; aucun fetch Trends dans le Worker.
+- **Écriture Google Sheet par API REST** : JWT RS256 signé via **Web Crypto**
+  (`crypto.subtle`, RSASSA-PKCS1-v1_5, scope `spreadsheets`) — Workers n'expose pas
+  `node:crypto` ; échange OAuth service account (`oauth2.googleapis.com/token`) puis
+  `values/A:I:append` en `USER_ENTERED` / `INSERT_ROWS`. Secrets `GOOGLE_SA_KEY`
+  (JSON du service account) + `SHEETS_ID`.
+- **Dédup avant append** (non négociable) : lecture `values.get` A:I, rejet si le
+  couple `(titre, type)` existe, et rejet si le `titre` seul existe (anti-doublon
+  rising/breakout d'un même terme) ; dédup valable aussi au sein du lot. Défauts
+  écrits : `statut = à trier`, `source = google_trends`, `date_ingestion` = date ISO
+  du jour, `chapitre_proposé`/`notes` vides.
+
 ---
 
 ## 2. Exécution — choix d'implémentation de l'assistant

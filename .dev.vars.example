@@ -4,10 +4,6 @@
 # Phase 2 — LLM curation (Anthropic Haiku)
 ANTHROPIC_API_KEY=
 
-# Phase 3 — Notion (token d'intégration interne Notion)
-NOTION_TOKEN=
-NOTION_DB_ID=
-
 # Protège les actions d'écriture (créer dans Notion) sur l'app publique.
 # Mets une longue chaîne aléatoire. Saisie 1× dans le dashboard (localStorage).
 ADMIN_TOKEN=
@@ -19,3 +15,10 @@ BRAVE_API_KEY=
 # Optionnel — France Travail (source chiffres marché FR)
 FT_CLIENT_ID=
 FT_CLIENT_SECRET=
+
+# Sortie des signaux Google Trends vers Google Sheet (remplace Notion).
+# GOOGLE_SA_KEY = contenu JSON du fichier de clé du service account (une ligne).
+# SHEETS_ID = id du spreadsheet cible (dans son URL). Partager le Sheet en
+# éditeur avec l'email client_email du service account.
+GOOGLE_SA_KEY=
+SHEETS_ID=
